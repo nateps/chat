@@ -37,7 +37,7 @@ var chat = require('./chat');
 
 var getMap = {
   '/': function(req, res) {
-    fs.readFile('chat2.html', 'utf8', function(err, data) {
+    fs.readFile('chat.html', 'utf8', function(err, data) {
       res.htmlResponse(data);
     });
   },

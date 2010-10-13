@@ -241,37 +241,6 @@ var Message = new Constructor('Message',
   });
 this.Message = Message;
 
-// var json = [
-//   'users', [{
-//     __type: 'User',
-//     __init: {
-//       name: {
-//         __type: 'Val',
-//         __init: 'Nate'
-//       },
-//       picUrl: {
-//         __type: 'Val',
-//         __init: 'http://nateps.com/resume/nate_smith_92x92.jpg'
-//       }
-//     }
-//   }],
-//   'session', {
-//     user: {
-//       __ref: 'users.0'
-//     },
-//     newComment: {
-//       __type: 'Val',
-//       __init: ''
-//     }
-//   },
-//   'messages', {
-//     __type: 'List'
-//   }
-// ]
-// 
-// var world = {};
-// unpackJson(world, json);
-
 var outMessage = function(message) {
   var picId = uniqueId(),
       nameId = uniqueId(),
