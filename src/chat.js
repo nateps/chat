@@ -12,6 +12,8 @@ var isArray = function(o) {
   return typeof o === 'object' && o.constructor === Array;
 }
 
+var isServer = typeof window === 'undefined';
+
 // Adapted from an example by Erik Karlsson
 // http://www.nonobtrusive.com/2009/07/24/custom-events-in-javascript-by-making-your-own-dispatcher-class/
 var dispatcher = (function() {
@@ -101,7 +103,10 @@ var Val, List;
       _fireUpdate: function() {
         var path = this.path();
         dispatcher.fire('update:' + path);
-        socket.send(JSON.stringify([path, this]));
+        var message = JSON.stringify([path, this]);
+        debugger;
+        unpackJson(JSON.parse(message));
+        //socket.send(JSON.stringify([path, this]));
       },
       get: function() {
         return this._value;
@@ -130,8 +135,6 @@ var Val, List;
     })();
   }
 })();
-this.Val = Val;
-this.List = List;
 
 function addElementUpdater(id, value, func) {
   var el, eventName = 'update:' + value.path();
@@ -201,8 +204,8 @@ var makeRef = function(root, init) {
   return ref;
 }
 // Takes a specially formatted JSON object and adds the values to the root
-var unpackJson = function(root, items) {
-  var key, val, i;
+var unpackJson = function(items) {
+  var key, val, i, root, props;
   var makeObject = function(val) {
     var obj, refs, ref, ii;
     if (typeof val == 'object') {
@@ -211,7 +214,7 @@ var unpackJson = function(root, items) {
           new this[val.__type](makeObject(val.__init)) :
           new this[val.__type];
       } else if (isDefined(val.__ref)) {
-        obj = makeRef(val.__ref, root);
+        obj = makeRef(root, val.__ref);
       } else {
         obj = val;
         for (ii in obj) {
@@ -224,22 +227,31 @@ var unpackJson = function(root, items) {
     return obj;
   }
   for (i = 0; key = items[i++], val = items[i++];) {
+    root = world;
+    props = key.split('.');
+    if (props.length > 1) {
+      while (props.length > 1) {
+        root = root[props.pop()];
+      }
+      key = props[0];
+    }
     root[key] = makeObject(val);
   }
 }
+this.unpackJson = unpackJson;
 
 var User = new Constructor('User',
   function(init) {
     this.name = init && init.name || new Val('');
     this.picUrl = init && init.picUrl || new Val('');
-  });
-this.User = User;
+  }
+);
 var Message = new Constructor('Message',
   function(init) {
     this.user = init && init.user || new User;
     this.comment = init && init.comment || new Val('');
-  });
-this.Message = Message;
+  }
+);
 
 var outMessage = function(message) {
   var picId = uniqueId(),
@@ -275,11 +287,12 @@ var outBody = function() {
       </div> \
     </div>'
 }
+this.outBody = outBody;
 
 var postMessage = function() {
   world.messages.push(
     new Message({
-      user: makeRef(world, 'session.user'),
+      user: world.session.user,
       comment: new Val(world.session.newComment.get())
     })
   );
@@ -288,14 +301,29 @@ var postMessage = function() {
 
 var world = {};
 this.world = world;
-world.users = [
-  new User({
-    name: new Val('Nate'),
-    picUrl: new Val('http://nateps.com/resume/nate_smith_92x92.jpg')
-  })
-];
-world.session = {
-  user: makeRef(world, 'users.0'),
-  newComment: new Val('')
-};
-world.messages = new List;
+world._items = [];
+world.addItem = function(key, value) {
+  this._items.push(key);
+  this[key] = value;
+}
+world.toJSON = function() {
+  var obj = [], i, item, items = this._items;
+  for (i = 0; item = items[i++];) {
+    obj.push(item, this[item]);
+  }
+  return obj;
+}
+
+if (isServer) {
+  world.addItem('users', [
+    new User({
+      name: new Val('Nate'),
+      picUrl: new Val('http://nateps.com/resume/nate_smith_92x92.jpg')
+    })
+  ]);
+  world.addItem('session', {
+    user: makeRef(world, 'users.0'),
+    newComment: new Val('')
+  });
+  world.addItem('messages', new List);
+}

@@ -37,14 +37,12 @@ var chat = require('./chat');
 
 var getMap = {
   '/': function(req, res) {
-    fs.readFile('chat.html', 'utf8', function(err, data) {
-      res.htmlResponse(data);
-    });
-  },
-  '/extern.js': function(req, res) {
-    var externJs = '';
-    fs.readFile('chat.js', 'utf8', function(err, data) {
-      res.jsResponse(data);
+    fs.readFile('chat.html', 'utf8', function(err, html) {
+      fs.readFile('chat.js', 'utf8', function(err, js) {
+        var body = '<script>' + js + 
+          'unpackJson(' + JSON.stringify(chat.world) + ');</script>';
+        res.htmlResponse(html.replace('{{body}}', body));
+      });
     });
   },
 };
@@ -104,10 +102,13 @@ var server = http.createServer(function(req, res) {
   handler(req, res);
 });
 
-var socket = io.listen(server);
+var socket = io.listen(server, {transports: ['websocket', 'htmlfile', 'xhr-multipart', 'xhr-polling', 'jsonp-polling']});
 socket.on('connection', function(client) {      
   client.on('message', function(message) {
+    /*console.log(JSON.parse(message));
+    chat.unpackJson(JSON.parse(message));
     console.log(message);
+    console.log(chat.world)*/
   });
 });
 
