@@ -39,9 +39,11 @@ var getMap = {
   '/': function(req, res) {
     fs.readFile('chat.html', 'utf8', function(err, html) {
       fs.readFile('chat.js', 'utf8', function(err, js) {
-        var body = '<script>' + js + 
-          'unpackJson(' + JSON.stringify(chat.world) + ');</script>';
-        res.htmlResponse(html.replace('{{body}}', body));
+        var out = chat.outServer();
+        var body = out.body + '<script>' + js + out.script + '</script>';
+        html = html.replace('{{body}}', out.body)
+          .replace('{{script}}', js + out.script);
+        res.htmlResponse(html);
       });
     });
   },
