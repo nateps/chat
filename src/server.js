@@ -9,6 +9,9 @@ var qs = require('querystring');
 // var mongo = require('../lib/node-mongodb-native/lib/mongodb');
 var io = require('../lib/socket.io/lib/socket.io');
 var chat = require('./chat');
+var _ = require('../lib/underscore_1.1.4');
+
+var underscore = fs.readFileSync('../lib/underscore_1.1.4.js');
 
 // var mongoHost = process.env['MONGO_NODE_DRIVER_HOST'] != null ? process.env['MONGO_NODE_DRIVER_HOST'] : 'localhost';
 // var mongoPort = process.env['MONGO_NODE_DRIVER_PORT'] != null ? process.env['MONGO_NODE_DRIVER_PORT'] : mongo.Connection.DEFAULT_PORT;
@@ -42,7 +45,7 @@ var getMap = {
         var out = chat.outServer();
         var body = out.body + '<script>' + js + out.script + '</script>';
         html = html.replace('{{body}}', out.body)
-          .replace('{{script}}', js + out.script);
+          .replace('{{script}}', underscore + js + out.script);
         res.htmlResponse(html);
       });
     });

@@ -1,22 +1,15 @@
 "use strict";
 
-var clone = function(o) {
-  var F = function() {};
-  F.prototype = o;
-  return new F;
-};
-var isDefined = function(o) {
-  return typeof o !== 'undefined';
-};
-var isArray = function(o) {
-  return typeof o === 'object' && o.constructor === Array;
-};
 var isServer = typeof window === 'undefined';
 
-var inArray = function(a, o) {
+if (isServer) {
+  var _ = require('../lib/underscore_1.1.4');
+}
+
+var containsEqual = function(a, o) {
   var i = a.length;
   while (i--) {
-    if (a[i] === o) {
+    if (_.isEqual(a[i], o)) {
       return true;
     }
   }
@@ -42,11 +35,11 @@ updater.bind = function(name, render, id, method, property) {
       record = {r: render, m: method, i: id, p: property},
       listeners = names[name];
   if (listeners) {
-    if (!inArray(listeners, record)) {
+    if (!containsEqual(listeners, record)) {
       listeners.push(record);
     }
   } else {
-    names[name] = [];
+    names[name] = [record];
   }
 };
 updater.trigger = function(name, value) {
@@ -54,7 +47,7 @@ updater.trigger = function(name, value) {
   if (listeners) {
     for (i = 0; listener = listeners[i++];) {
       if (listener.r) {
-        s = isArray(value) ?
+        s = _.isArray(value) ?
           outList(renders[listener.r], value) :
           renders[listener.r](value);
       } else {
