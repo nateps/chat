@@ -42,7 +42,7 @@ var getMap = {
   '/': function(req, res) {
     fs.readFile('chat.html', 'utf8', function(err, html) {
       fs.readFile('chat.js', 'utf8', function(err, js) {
-        var out = chat.outServer();
+        var out = chat.out.server();
         var body = out.body + '<script>' + js + out.script + '</script>';
         html = html.replace('{{body}}', out.body)
           .replace('{{script}}', underscore + js + out.script);

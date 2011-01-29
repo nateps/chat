@@ -6,16 +6,6 @@ if (isServer) {
   var _ = require('../lib/underscore_1.1.4');
 }
 
-var containsEqual = function(a, o) {
-  var i = a.length;
-  while (i--) {
-    if (_.isEqual(a[i], o)) {
-      return true;
-    }
-  }
-  return false;
-}
-
 var updater = {
   _names: {},
   _methods: {
@@ -30,10 +20,15 @@ var updater = {
     }
   }
 };
-updater.bind = function(name, render, id, method, property) {
-  var names = this._names,
-      record = {r: render, m: method, i: id, p: property},
+updater.bind = function(name, transform, id, method, property) {
+  var names = updater._names,
+      record = {t: transform, i: id, m: method, p: property},
       listeners = names[name];
+  var containsEqual = function(a, o) {
+    return _.some(a, function(i) {
+      return _.isEqual(i, o);
+    });
+  }
   if (listeners) {
     if (!containsEqual(listeners, record)) {
       listeners.push(record);
@@ -43,27 +38,23 @@ updater.bind = function(name, render, id, method, property) {
   }
 };
 updater.trigger = function(name, value) {
-  var listeners = this._names[name], i, listener, s, el;
+  var names = updater._names,
+      listeners = names[name],
+      i, listener, transform, s, el;
   if (listeners) {
-    for (i = 0; listener = listeners[i++];) {
-      if (listener.r) {
-        s = _.isArray(value) ?
-          outList(renders[listener.r], value) :
-          renders[listener.r](value);
-      } else {
-        s = value;
-      }
+    _.each(listeners, function(listener, i) {
+      transform = listener.t && out[listener.t];
+      s = (transform) ?
+        _.isArray(value) ? out.list(value, transform) : transform(value) :
+        value;
       el = document.getElementById(listener.i);
       if (el) {
-        this._methods[listener.m](
-          s,
-          document.getElementById(listener.i),
-          listener.p
-        );
+        updater._methods[listener.m](s, el, listener.p);
       } else {
-        // TODO: Should remove the listener
+        delete listeners[i];
       }
-    }
+    });
+    names[name] = _.compact(listeners);
   }
 };
 
@@ -87,35 +78,37 @@ var model = {
     }
   },
   get: function(a0, a1, a2) {
+    var world = model._world;
     switch (arguments.length) {
       case 3:
-        return this._world[a0][a1][a2];
+        return world[a0][a1][a2];
       case 2:
-        return this._world[a0][a1];
+        return world[a0][a1];
       case 1:
-        return this._world[a0];
+        return world[a0];
       case 0:
-        return this._world;
+        return world;
     }
     return null;
   },
   setSilent: function(a0, a1, a2, a3) {
+    var world = model._world;
     switch (arguments.length) {
       case 4:
-        this._world[a0][a1][a2] = a3;
+        world[a0][a1][a2] = a3;
         return;
       case 3:
-        this._world[a0][a1] = a2;
+        world[a0][a1] = a2;
         return;
       case 2:
-        this._world[a0] = a1;
+        world[a0] = a1;
         return;
       case 1:
-        this._world = a0;
+        world = a0;
     }
   },
   set: function(a0, a1, a2, a3) {
-    this.setSilent(a0, a1, a2, a3);
+    model.setSilent(a0, a1, a2, a3);
     switch (arguments.length) {
       case 4:
         updater.trigger(a0 + '.' + a1 + '.' + a2, a3);
@@ -128,67 +121,64 @@ var model = {
     }
   },
   push: function(name, value) {
-    var arr = this._world[name];
+    var arr = model._world[name];
     arr.push(value);
     updater.trigger(name, arr);
   }
 }
 
-var outList = function(render, items) {
-  for (var i = 0, html = '', item; item = items[i]; i++) {
-    html += render(item, i);
-  }
-  return html;
-}
+var out = {
+  list: function(items, func) {
+    return _.reduce(items, function(memo, item) {
+      return memo + func(item);
+    }, '');
+  },
+  server: function() {
+    return {
+      body: out.body(),
+      script: 'uniqueId._count=' + uniqueId._count + ';' +
+      'updater._names=' + JSON.stringify(updater._names) + ';'
+    }
+  },
+  message: function(message, index) {
+    var picId = uniqueId(),
+        nameId = uniqueId(),
+        commentId = uniqueId(),
+        user = model.get('users', message.userId);
 
-var outMessage = function(message, index) {
-  var picId = uniqueId(),
-      nameId = uniqueId(),
-      commentId = uniqueId(),
-      user = model.get('users', message.userId);
-  
-  updater.bind('users.' + message.userId + '.picUrl', null, picId, 'attr', 'src');
-  updater.bind('users.' + message.userId + '.name', null, nameId, 'html');
-  updater.bind('messages.' + index + '.comment', null, commentId, 'html');
-  
-  return '<li> \
-    <img id=' + picId + ' src="' + user.picUrl + '" class=pic> \
-    <div class=message> \
-      <p><b id=' + nameId + '>' + user.name + '</b> \
-      <p id=' + commentId + '>' + message.comment + '</div>'
-}
-var renders = {
-  outMessage: outMessage
-};
+    updater.bind('users.' + message.userId + '.picUrl', null, picId, 'attr', 'src');
+    updater.bind('users.' + message.userId + '.name', null, nameId, 'html');
+    updater.bind('messages.' + index + '.comment', null, commentId, 'html');
 
-var outBody = function() {
-  var session = model.get('session');
-  var userId = session.userId;
-  var user = model.get('users', userId);
-  
-  updater.bind('messages', 'outMessage', 'messageList', 'html');
-  updater.bind('users.' + userId + '.picUrl', null, 'inputPic', 'attr', 'src');
-  updater.bind('users.' + userId + '.name', null, 'inputName', 'attr', 'value');
-  updater.bind('session.newComment', null, 'commentInput', 'prop', 'value');
-  
-  return '<ul id=messageList>' + outList(outMessage, model.get('messages')) + '</ul> \
-    <div id=foot> \
-      <img id=inputPic src="' + user.picUrl + '" class=pic> \
-      <div id=inputs> \
-        <input id=inputName onkeyup=model.set("users",' + userId + ',"name",this.value) value="' + user.name + '"> <b>(your nickname)</b> \
-        <form action=javascript:postMessage() style=position:relative;margin-top:6px;padding-right:6px> \
-          <input id=commentInput style=width:100% onkeyup=model.setSilent("session","newComment",this.value) value="' + session.newComment + '"> \
-        </form> \
-      </div> \
-    </div>'
-}
-this.outServer = function() {
-  return {
-    body: outBody(),
-    script: 'uniqueId._count=' + uniqueId._count + ';' +
-    'updater._names=' + JSON.stringify(updater._names) + ';'
+    return '<li> \
+      <img id=' + picId + ' src="' + user.picUrl + '" class=pic> \
+      <div class=message> \
+        <p><b id=' + nameId + '>' + user.name + '</b> \
+        <p id=' + commentId + '>' + message.comment + '</div>'
+  },
+  body: function() {
+    var session = model.get('session');
+    var userId = session.userId;
+    var user = model.get('users', userId);
+
+    updater.bind('messages', 'message', 'messageList', 'html');
+    updater.bind('users.' + userId + '.picUrl', null, 'inputPic', 'attr', 'src');
+    updater.bind('users.' + userId + '.name', null, 'inputName', 'attr', 'value');
+    updater.bind('session.newComment', null, 'commentInput', 'prop', 'value');
+
+    return '<ul id=messageList>' + out.list(model.get('messages'), out.message) + '</ul> \
+      <div id=foot> \
+        <img id=inputPic src="' + user.picUrl + '" class=pic> \
+        <div id=inputs> \
+          <input id=inputName onkeyup=model.set("users",' + userId + ',"name",this.value) value="' + user.name + '"> <b>(your nickname)</b> \
+          <form action=javascript:postMessage() style=position:relative;margin-top:6px;padding-right:6px> \
+            <input id=commentInput style=width:100% onkeyup=model.setSilent("session","newComment",this.value) value="' + session.newComment + '"> \
+          </form> \
+        </div> \
+      </div>'
   }
 }
+this.out = out;
 
 var postMessage = function() {
   model.push('messages', {
