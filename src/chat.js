@@ -104,7 +104,7 @@ var Val, List;
         var path = this.path();
         dispatcher.fire('update:' + path);
         var message = JSON.stringify([path, this]);
-        debugger;
+        //debugger;
         unpackJson(JSON.parse(message));
         //socket.send(JSON.stringify([path, this]));
       },
