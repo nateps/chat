@@ -110,8 +110,9 @@ var server = http.createServer(function(req, res) {
 var socket = io.listen(server, {transports: ['websocket', 'htmlfile', 'xhr-multipart', 'xhr-polling', 'jsonp-polling']});
 socket.on('connection', function(client) {      
   client.on('message', function(message) {
-    message = JSON.parse(message);
-    chat.model[message[0]].apply(null, message[1]);
+    var data = JSON.parse(message);
+    chat.model[data[0]].apply(null, data[1]);
+    client.broadcast(message);
   });
 });
 

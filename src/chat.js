@@ -8,8 +8,9 @@ if (isServer) {
   var socket = new io.Socket(null, {port: 8001});
   socket.connect();
   socket.on('message', function(message) {
+    console.log(message);
     message = JSON.parse(message);
-    model[message[0]].apply(null, message[1]);
+    model['_' + message[0]].apply(null, message[1]);
   });
 }
 
@@ -123,8 +124,8 @@ var model = {
         world = a0;
     }
   },
-  set: function(a0, a1, a2, a3) {
-    model.setSilent(a0, a1, a2, a3);
+  _set: function(a0, a1, a2, a3) {
+    model.setSilent.apply(model, _.toArray(arguments));
     switch (arguments.length) {
       case 4:
         updater.trigger(a0 + '.' + a1 + '.' + a2, a3);
@@ -135,12 +136,18 @@ var model = {
       case 2:
         updater.trigger(a0, a1);
     }
+  },
+  set: function(a0, a1, a2, a3) {
+    model._set.apply(model, _.toArray(arguments));
     model._send('set', arguments);
   },
-  push: function(name, value) {
+  _push: function(name, value) {
     var arr = model._world[name];
     arr.push(value);
     updater.trigger(name, arr);
+  },
+  push: function(name, value) {
+    model._push(name, value);
     model._send('push', arguments);
   }
 }
