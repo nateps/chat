@@ -4,6 +4,13 @@ var isServer = typeof window === 'undefined';
 
 if (isServer) {
   var _ = require('../lib/underscore_1.1.4');
+} else {
+  var socket = new io.Socket(null, {port: 8001});
+  socket.connect();
+  socket.on('message', function(message) {
+    message = JSON.parse(message);
+    model[message[0]].apply(null, message[1]);
+  });
 }
 
 var updater = {
@@ -41,7 +48,7 @@ updater.trigger = function(name, value) {
   var names = updater._names,
       listeners = names[name],
       i, listener, transform, s, el;
-  if (listeners) {
+  if (listeners && !isServer) {
     _.each(listeners, function(listener, i) {
       transform = listener.t && out[listener.t];
       s = (transform) ?
@@ -77,6 +84,15 @@ var model = {
       newComment: ''
     }
   },
+  _send: function(method, args){
+    if (!isServer) {
+      socket.send(
+        JSON.stringify(
+          [method, _.toArray(args)]
+        )
+      );
+    }
+  },
   get: function(a0, a1, a2) {
     var world = model._world;
     switch (arguments.length) {
@@ -96,13 +112,13 @@ var model = {
     switch (arguments.length) {
       case 4:
         world[a0][a1][a2] = a3;
-        return;
+        break;
       case 3:
         world[a0][a1] = a2;
-        return;
+        break;
       case 2:
         world[a0] = a1;
-        return;
+        break;
       case 1:
         world = a0;
     }
@@ -112,20 +128,23 @@ var model = {
     switch (arguments.length) {
       case 4:
         updater.trigger(a0 + '.' + a1 + '.' + a2, a3);
-        return;
+        break;
       case 3:
         updater.trigger(a0 + '.' + a1, a2);
-        return;
+        break;
       case 2:
         updater.trigger(a0, a1);
     }
+    model._send('set', arguments);
   },
   push: function(name, value) {
     var arr = model._world[name];
     arr.push(value);
     updater.trigger(name, arr);
+    model._send('push', arguments);
   }
 }
+this.model = model;
 
 var out = {
   list: function(items, func) {
@@ -137,7 +156,8 @@ var out = {
     return {
       body: out.body(),
       script: 'uniqueId._count=' + uniqueId._count + ';' +
-      'updater._names=' + JSON.stringify(updater._names) + ';'
+      'updater._names=' + JSON.stringify(updater._names) + ';' +
+      'model._world=' + JSON.stringify(model._world) + ';'
     }
   },
   message: function(message, index) {
