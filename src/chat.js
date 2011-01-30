@@ -38,13 +38,19 @@ EventDispatcher.prototype = {
     var names = this._names,
         listeners = names[name],
         handler = this._handler,
+        dirty = false,
         successful;
     if (listeners && !isServer) {
       _.each(listeners, function(listener, i) {
         successful = handler(listener, value);
-        if (!successful) delete listeners[i];
+        if (!successful) {
+          delete listeners[i];
+          dirty = true;
+        }
       });
-      names[name] = _.compact(listeners);
+      if (dirty) {
+        names[name] = _.compact(listeners);
+      }
     }
   }
 }
