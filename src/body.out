@@ -1,0 +1,17 @@
+body() {
+  var session = model.get('session'),
+      user = model.get('users', session.userId);
+  
+  return <ul id="messageList">
+    out.list(model.get('messages'), out.message)
+  </ul>
+  <div id="foot">
+    <img id="inputPic" src=user.picUrl class="pic">
+    <div id="inputs">
+      <input id="inputName" value=user.name>&sp;<b>"(your nickname)"</b>
+      <form id="inputForm" action="javascript:postMessage()">
+        <input id="commentInput" value=session.newComment silent>
+      </form>
+    </div>
+  </div>;
+}
