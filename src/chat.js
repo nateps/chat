@@ -15,9 +15,9 @@ if (isServer) {
 
 var EventDispatcher = function(handler) {
   this._handler = handler;
+  this._names = {};
 }
 EventDispatcher.prototype = {
-  _names: {},
   bind: function(name, listener) {
     var names = this._names,
         listeners = names[name];
@@ -56,7 +56,7 @@ EventDispatcher.prototype = {
 }
 
 var events = {
-  _methods: {
+  _setMethods: {
     attr: function(value, el, attr) {
       el.setAttribute(attr, value);
     },
@@ -67,26 +67,59 @@ var events = {
       el.innerHTML = value;
     }
   },
+  _getMethods: {
+    attr: function(el, attr) {
+      return el.getAttribute(attr);
+    },
+    prop: function(el, prop) {
+      return el[prop];
+    },
+    html: function(el) {
+      return el.innerHTML;
+    }
+  },
   model: new EventDispatcher(function(listener, value) {
-    var transform = listener[0],
-        id = listener[1],
-        method = listener[2],
-        property = listener[3],
+    var id = listener[0],
+        method = listener[1],
+        property = listener[2],
+        transform = listener[3],
         el = document.getElementById(id),
         transform, s;
-    if (el) {
-      transform = transform && out[transform];
-      s = (transform) ?
-        _.isArray(value) ? out.list(value, transform) : transform(value) :
-        value;
-      events._methods[method](s, el, property);
-      return true;
-    }
-    return false;
+    if (!el) return false;
+    transform = transform && out[transform];
+    s = (transform) ?
+      _.isArray(value) ? out.list(value, transform) : transform(value) :
+      value;
+    events._setMethods[method](s, el, property);
+    return true;
   }),
-  dom: new EventDispatcher(function(listener, value) {
-    
+  dom: new EventDispatcher(function(listener, targetId) {
+    var func = listener[0],
+        args = listener[1],
+        id = listener[2],
+        method = listener[3],
+        property = listener[4],
+        el, value;
+    if (id === targetId) {
+      el = document.getElementById(id);
+      if (!el) return false;
+      value = events._getMethods[method](el, property);
+      model[func].apply(model, args.concat(value));
+    }
+    return true;
   })
+}
+
+var domHandler = function(e) {
+  var e = e || event,
+      target = e.target || e.srcElement;
+  if (target.nodeType === 3) target = target.parentNode; // Fix for Safari bug
+  events.dom.trigger(e.type, target.id);
+}
+if (!isServer) {
+  _.each(['keyup', 'keydown'], function(item) {
+    document['on' + item] = domHandler;
+  });
 }
 
 var uniqueId = function() {
@@ -187,6 +220,7 @@ var out = {
       body: out.body(),
       script: 'uniqueId._count=' + uniqueId._count + ';' +
       'events.model._names=' + JSON.stringify(events.model._names) + ';' +
+      'events.dom._names=' + JSON.stringify(events.dom._names) + ';' +
       'model._world=' + JSON.stringify(model._world) + ';'
     }
   },
@@ -196,9 +230,9 @@ var out = {
         commentId = uniqueId(),
         user = model.get('users', message.userId);
 
-    events.model.bind('users.' + message.userId + '.picUrl', [null, picId, 'attr', 'src']);
-    events.model.bind('users.' + message.userId + '.name', [null, nameId, 'html']);
-    events.model.bind('messages.' + index + '.comment', [null, commentId, 'html']);
+    events.model.bind('users.' + message.userId + '.picUrl', [picId, 'attr', 'src']);
+    events.model.bind('users.' + message.userId + '.name', [nameId, 'html']);
+    events.model.bind('messages.' + index + '.comment', [commentId, 'html']);
 
     return '<li> \
       <img id=' + picId + ' src="' + user.picUrl + '" class=pic> \
@@ -211,20 +245,21 @@ var out = {
         userId = session.userId,
         user = model.get('users', userId);
 
-    events.model.bind('messages', ['message', 'messageList', 'html']);
-    events.model.bind('users.' + userId + '.picUrl', [null, 'inputPic', 'attr', 'src']);
-    events.model.bind('users.' + userId + '.name', [null, 'inputName', 'attr', 'value']);
-    events.model.bind('session.newComment', [null, 'commentInput', 'prop', 'value']);
+    events.model.bind('messages', ['messageList', 'html', null, 'message']);
+    events.model.bind('users.' + userId + '.picUrl', ['inputPic', 'attr', 'src']);
+    events.model.bind('users.' + userId + '.name', ['inputName', 'attr', 'value']);
+    events.model.bind('session.newComment', ['commentInput', 'prop', 'value']);
     
-    
+    events.dom.bind('keyup', ['set', ['users', userId, 'name'], 'inputName', 'prop', 'value']);
+    events.dom.bind('keyup', ['setSilent', ['session', 'newComment'], 'commentInput', 'prop', 'value']);
 
     return '<ul id=messageList>' + out.list(model.get('messages'), out.message) + '</ul> \
       <div id=foot> \
         <img id=inputPic src="' + user.picUrl + '" class=pic> \
         <div id=inputs> \
-          <input id=inputName onkeyup=model.set("users",' + userId + ',"name",this.value) value="' + user.name + '"> <b>(your nickname)</b> \
+          <input id=inputName value="' + user.name + '"> <b>(your nickname)</b> \
           <form id=inputForm action=javascript:postMessage()> \
-            <input id=commentInput onkeyup=model.setSilent("session","newComment",this.value) value="' + session.newComment + '"> \
+            <input id=commentInput value="' + session.newComment + '"> \
           </form> \
         </div> \
       </div>'
