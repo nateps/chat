@@ -7,8 +7,8 @@ var sys = require('sys');
 var url = require('url');
 var qs = require('querystring');
 // var mongo = require('../lib/node-mongodb-native/lib/mongodb');
-var io = require('../lib/socket.io/lib/socket.io');
-var _ = require('../lib/underscore_1.1.4');
+var io = require('socket.io');
+var _ = require('underscore');
 var chat = require('./chat');
 
 // var mongoHost = process.env['MONGO_NODE_DRIVER_HOST'] != null ? process.env['MONGO_NODE_DRIVER_HOST'] : 'localhost';

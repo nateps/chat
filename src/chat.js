@@ -3,7 +3,7 @@
 var isServer = typeof window === 'undefined';
 
 if (isServer) {
-  var _ = require('../lib/underscore_1.1.4');
+  var _ = require('underscore');
 } else {
   var socket = new io.Socket(null, {port: 8001});
   socket.connect();
