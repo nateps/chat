@@ -124,6 +124,9 @@ var model = this.model = (function(){
         prop: function(value, el, prop) {
           el[prop] = value;
         },
+        propLazy: function(value, el, prop) {
+          if (el !== document.activeElement) el[prop] = value;
+        },
         html: function(value, el) {
           el.innerHTML = value;
         }
@@ -282,6 +285,145 @@ var uniqueId = function() {
 };
 uniqueId._count = 0;
 
+// HTML Parser By John Resig (ejohn.org)
+// http://ejohn.org/blog/pure-javascript-html-parser/
+// Original code by Erik Arvidsson, Mozilla Public License
+// http://erik.eae.net/simplehtmlparser/simplehtmlparser.js
+ 
+var htmlParser = function(html, handler) {
+  // Regular Expressions for parsing
+  var startTag = /^<(\w+)((?:\s+\w+(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|[^>\s]+))?)*)\s*(\/?)>/,
+      endTag = /^<\/(\w+)[^>]*>/,
+      attr = /(\w+)(?:\s*=\s*(?:(?:"((?:\\.|[^"])*)")|(?:'((?:\\.|[^'])*)')|([^>\s]+)))?/g,
+      // HTML elements
+      empty = makeMap('area,base,basefont,br,col,frame,hr,img,input,isindex,link,meta,param,embed'),
+      block = makeMap('address,applet,blockquote,button,center,dd,del,dir,div,dl,dt,fieldset,form,frameset,hr,iframe,ins,isindex,li,map,menu,noframes,noscript,object,ol,p,pre,script,table,tbody,td,tfoot,th,thead,tr,ul'),
+      inline = makeMap('a,abbr,acronym,applet,b,basefont,bdo,big,br,button,cite,code,del,dfn,em,font,i,iframe,img,input,ins,kbd,label,map,object,q,s,samp,script,select,small,span,strike,strong,sub,sup,textarea,tt,u,var'),
+      // Elements that close themselves when left open
+      closeSelf = makeMap('colgroup,dd,dt,li,options,p,td,tfoot,th,thead,tr'),
+      // Attributes that have their values filled in (Ex: disabled="disabled")
+      fillAttrs = makeMap('checked,compact,declare,defer,disabled,ismap,multiple,nohref,noresize,noshade,nowrap,readonly,selected'),
+      // Special Elements (can contain anything)
+      special = makeMap("script,style"),
+      stack = [],
+      last, index, chars, match;
+  stack.last = function() {
+    return this[this.length - 1];
+  };
+  
+  function makeMap(list) {
+    return _.reduce(list.split(','), function(memo, item) {
+      memo[item] = true;
+      return memo;
+    }, {});
+  }
+  
+  function parseStartTag(tag, tagName, rest, unary) {
+    if (block[tagName]) {
+      while (stack.last() && inline[stack.last()]) {
+        parseEndTag('', stack.last());
+      }
+    }
+    if (closeSelf[tagName] && stack.last() === tagName) {
+      parseEndTag('', tagName);
+    }
+    unary = empty[tagName] || !!unary;
+    if (!unary) stack.push(tagName);
+    
+    if (handler.start) {
+      var attrs = {};
+      rest.replace(attr, function(match, name) {
+        var value = arguments[2] ? arguments[2] :
+          arguments[3] ? arguments[3] :
+          arguments[4] ? arguments[4] :
+          fillAttrs[name] ? name : '';
+        attrs[name] = value;
+      });
+      if (handler.start) handler.start(tagName, attrs, unary);
+    }
+  }
+
+  function parseEndTag(tag, tagName) {
+    // If no tag name is provided, clean shop
+    if (!tagName) {
+      var pos = 0;
+    // Find the closest opened tag of the same type
+    } else {
+      for (var pos = stack.length - 1; pos >= 0; pos--) {
+        if (stack[pos] === tagName) break;
+      }
+    }
+    if (pos >= 0) {
+      // Close all the open elements, up the stack
+      for (var i = stack.length - 1; i >= pos; i--) {
+        if (handler.end) handler.end(stack[i]);
+      }
+      // Remove the open elements from the stack
+      stack.length = pos;
+    }
+  }
+  
+  while (html) {
+    last = html;
+    chars = true;
+    
+    // Make sure we're not in a script or style element
+    if (!stack.last() || !special[stack.last()]) {
+
+      // Comment
+      if (html.indexOf('<!--') === 0) {
+        index = html.indexOf('-->');
+        if (index >= 0) {
+          if (handler.comment) handler.comment(html.substring(4, index));
+          html = html.substring(index + 3);
+          chars = false;
+        }
+
+      // End tag
+      } else if (html.indexOf('</') === 0) {
+        match = html.match(endTag);
+        if (match) {
+          html = html.substring(match[0].length);
+          match[0].replace(endTag, parseEndTag);
+          chars = false;
+        }
+
+      // Start tag
+      } else if (html.indexOf('<') === 0) {
+        match = html.match(startTag);
+        if (match) {
+          html = html.substring(match[0].length);
+          match[0].replace(startTag, parseStartTag);
+          chars = false;
+        }
+      }
+
+      if (chars) {
+        index = html.indexOf('<');
+        var text = index < 0 ? html : html.substring(0, index);
+        html = index < 0 ? '' : html.substring(index);
+        if (handler.chars) handler.chars(text);
+      }
+
+    } else {
+      html = html.replace(new RegExp('(.*)<\/' + stack.last() + '[^>]*>'), function(all, text){
+        text = text.replace(/<!--(.*?)-->/g, '$1')
+          .replace(/<!\[CDATA\[(.*?)]]>/g, '$1');
+        if (handler.chars) handler.chars(text);
+        return '';
+      });
+      parseEndTag('', stack.last());
+    }
+    
+    if (html === last) {
+      throw 'Parse Error: ' + html;
+    }
+  }
+  
+  // Clean up any remaining tags
+  parseEndTag();
+};
+
 var out = this.out = {
   _list: function(items, func) {
     return _.reduce(items, function(memo, item, index) {
@@ -297,45 +439,122 @@ var out = this.out = {
       'model.init(' + JSON.stringify(model.get()) + ');'
     }
   },
-  message: function(message, index) {
-    var picId = uniqueId(),
-        nameId = uniqueId(),
-        commentId = uniqueId(),
-        user = model.get('users.' + message.userId);
+  _parse: function(data, template) {
+    var stack = [],
+        placeholder = /^(\{{2,3})(\w+)\}{2,3}$/,
+        html;
+    stack.last = function() {
+      return this[this.length - 1];
+    };
+    function getModelText(datum, escaped) {
+      var obj = model.get(datum.model),
+          transform = datum.transform;
+      return (_.isArray(obj) && transform) ? out._list(obj, out[transform]) : obj;
+    }
 
-    model.events.bind('users.' + message.userId + '.picUrl', [picId, 'attr', 'src']);
-    model.events.bind('users.' + message.userId + '.name', [nameId, 'html']);
-    model.events.bind('messages.' + index + '.comment', [commentId, 'html']);
+    htmlParser(template, {
+      start: function(tag, attrs) {
+        var match, datum, escaped, method, domArgs;
+        _.each(attrs, function(value, key) {
+          match = placeholder.exec(value);
+          if (match) {
+            hasPlaceholder = true;
+            escaped = match[1] === '{{';
+            datum = data[match[2]];
+            if (_.isUndefined(attrs.id)) {
+              attrs.id = uniqueId();
+            }
+            method = 'attr';
+            if (tag === 'input' && key === 'value') {
+              domArgs = ['set', datum.model, attrs.id, 'prop', 'value'];
+              method = 'propLazy';
+              if (datum.silent) {
+                domArgs[0] = 'setSilent';
+                method = 'prop';
+              }
+              dom.events.bind('keyup', domArgs);
+              dom.events.bind('keydown', domArgs);
+            }
+            model.events.bind(datum.model, [attrs.id, method, key]);
+            attrs[key] = getModelText(datum, escaped);
+          }
+        });
+        stack.push(['start', tag, attrs]);
+      },
+      chars: function(text) {
+        var last = stack.last(),
+            attrs, match, datum, escaped;      
+        match = placeholder.exec(text);
+        if (match) {
+          escaped = match[1] === '{{';
+          datum = data[match[2]];
+          text = getModelText(datum, escaped);
+          if (last[0] === 'start') {
+            attrs = last[2];
+            if (_.isUndefined(attrs.id)) {
+              attrs.id = uniqueId();
+            }
+            model.events.bind(datum.model, [attrs.id, 'html', null, datum.transform]);
+          }
+        }
+        stack.push(['chars', text]);
+      },
+      end: function(tag) {
+        stack.push(['end', tag]);
+      }
+    });
 
-    return '<li> \
-      <img id=' + picId + ' src="' + user.picUrl + '" class=pic> \
-      <div class=message> \
-        <p><b id=' + nameId + '>' + user.name + '</b> \
-        <p id=' + commentId + '>' + message.comment + '</div>'
-  },
-  body: function() {
-    model.events.bind('messages', ['messageList', 'html', null, 'message']);
-    model.events.bind('session.user.picUrl', ['inputPic', 'attr', 'src']);
-    model.events.bind('session.user.name', ['inputName', 'attr', 'value']);
-    model.events.bind('session.newComment', ['commentInput', 'prop', 'value']);
-    
-    dom.events.bind('keyup', ['set', 'session.user.name', 'inputName', 'prop', 'value']);
-    dom.events.bind('keyup', ['setSilent', 'session.newComment', 'commentInput', 'prop', 'value']);
-    dom.events.bind('keydown', ['set', 'session.user.name', 'inputName', 'prop', 'value']);
-    dom.events.bind('keydown', ['setSilent', 'session.newComment', 'commentInput', 'prop', 'value']);
+    html = _.reduce(stack, function(memo, item) {
+      switch (item[0]) {
+        case 'start':
+          return memo + '<' + item[1] +
+            _.reduce(item[2], function(attrs, value, key) {
+              return attrs + ' ' + key + '="' + value + '"';
+            }, '') + '>';
+        case 'chars':
+          return memo + item[1];
+        case 'end':
+          return memo + '</' + item[1] + '>';
+      }
+    }, '');
 
-    return '<ul id=messageList>' + out._list(model.get('messages'), out.message) + '</ul> \
-      <div id=foot> \
-        <img id=inputPic src="' + model.get('session.user.picUrl') + '" class=pic> \
-        <div id=inputs> \
-          <input id=inputName value="' + model.get('session.user.name') + '"> <b>(your nickname)</b> \
-          <form id=inputForm action=javascript:postMessage()> \
-            <input id=commentInput value="' + model.get('session.newComment') + '"> \
-          </form> \
-        </div> \
-      </div>'
+    return html;
   }
 }
+
+out.message = function(message, index) {
+  return out._parse({
+      userPicUrl: { model: 'users.' + message.userId + '.picUrl' },
+      userName: { model: 'users.' + message.userId + '.name' },
+      comment: { model: 'messages.' + index + '.comment' }
+    },
+    '<li><img src="{{{userPicUrl}}}" class=pic>' +
+      '<div class=message>' +
+        '<p><b>{{userName}}</b>' +
+        '<p>{{comment}}' +
+      '</div>'
+  );
+};
+
+out.body = function() {
+  return out._parse({
+      messages: { model: 'messages', transform: 'message' },
+      userPicUrl: { model: 'session.user.picUrl' },
+      userName: { model: 'session.user.name' },
+      newComment: { model: 'session.newComment', silent: true }
+    },
+    '<ul id=messageList>{{{messages}}}</ul>' +
+      '<div id=foot>' +
+        '<img id=inputPic src="{{{userPicUrl}}}" class=pic>' +
+        '<div id=inputs>' +
+          '<input id=inputName value="{{userName}}"> <b>(your nickname)</b>' +
+          '<form id=inputForm action=javascript:postMessage()>' +
+            '<input id=commentInput value="{{newComment}}">' +
+          '</form>' +
+        '</div>' +
+      '</div>'
+  );
+};
 
 var postMessage = function() {
   model.push('messages', {
