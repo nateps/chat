@@ -8,10 +8,8 @@ var url = require('url');
 var qs = require('querystring');
 // var mongo = require('../lib/node-mongodb-native/lib/mongodb');
 var io = require('../lib/socket.io/lib/socket.io');
-var chat = require('./chat');
 var _ = require('../lib/underscore_1.1.4');
-
-var underscore = fs.readFileSync('../lib/underscore_1.1.4.js');
+var chat = require('./chat');
 
 // var mongoHost = process.env['MONGO_NODE_DRIVER_HOST'] != null ? process.env['MONGO_NODE_DRIVER_HOST'] : 'localhost';
 // var mongoPort = process.env['MONGO_NODE_DRIVER_PORT'] != null ? process.env['MONGO_NODE_DRIVER_PORT'] : mongo.Connection.DEFAULT_PORT;
@@ -38,11 +36,13 @@ var underscore = fs.readFileSync('../lib/underscore_1.1.4.js');
 //   }
 // };
 
+var underscore = fs.readFileSync('../lib/underscore_1.1.4.js');
+
 var getMap = {
   '/': function(req, res) {
     fs.readFile('chat.html', 'utf8', function(err, html) {
       fs.readFile('chat.js', 'utf8', function(err, js) {
-        var out = chat.out.server();
+        var out = chat.out._server();
         var body = out.body + '<script>' + js + out.script + '</script>';
         html = html.replace('{{body}}', out.body)
           .replace('{{script}}', underscore + js + out.script);

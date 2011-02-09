@@ -13,8 +13,9 @@ if (isServer) {
   });
 }
 
-var EventDispatcher = function(handler) {
-  this._handler = handler;
+var EventDispatcher = function(bindCallback, triggerCallback) {
+  this._bindCallback = bindCallback;
+  this._triggerCallback = triggerCallback;
   this._names = {};
 }
 EventDispatcher.prototype = {
@@ -26,23 +27,31 @@ EventDispatcher.prototype = {
         return _.isEqual(i, o);
       });
     }
-    if (listeners) {
-      if (!containsEqual(listeners, listener)) {
-        listeners.push(listener);
+    if (this._bindCallback(name, listener)) {
+      if (listeners) {
+        if (!containsEqual(listeners, listener)) {
+          listeners.push(listener);
+        }
+      } else {
+        names[name] = [listener];
       }
-    } else {
-      names[name] = [listener];
     }
+  },
+  unbind: function(name, listener) {
+    var names = this._names;
+    names[name] = _.filter(names[name], function(item) {
+      return !_.isEqual(item, listener);
+    });
   },
   trigger: function(name, value) {
     var names = this._names,
         listeners = names[name],
-        handler = this._handler,
+        callback = this._triggerCallback,
         dirty = false,
         successful;
     if (listeners && !isServer) {
       _.each(listeners, function(listener, i) {
-        successful = handler(listener, value);
+        successful = callback(listener, value);
         if (!successful) {
           delete listeners[i];
           dirty = true;
@@ -55,93 +64,137 @@ EventDispatcher.prototype = {
   }
 }
 
-var events = {
-  _setMethods: {
-    attr: function(value, el, attr) {
-      el.setAttribute(attr, value);
+var dom = (function(){
+  var that = {},
+      getMethods = {
+        attr: function(el, attr) {
+          return el.getAttribute(attr);
+        },
+        prop: function(el, prop) {
+          return el[prop];
+        },
+        html: function(el) {
+          return el.innerHTML;
+        }
+      };
+  
+  var events = that.events = new EventDispatcher(
+    function(name, listener) {
+      return true;
     },
-    prop: function(value, el, prop) {
-      el[prop] = value;
-    },
-    html: function(value, el) {
-      el.innerHTML = value;
-    }
-  },
-  _getMethods: {
-    attr: function(el, attr) {
-      return el.getAttribute(attr);
-    },
-    prop: function(el, prop) {
-      return el[prop];
-    },
-    html: function(el) {
-      return el.innerHTML;
-    }
-  },
-  model: new EventDispatcher(function(listener, value) {
-    var id = listener[0],
-        method = listener[1],
-        property = listener[2],
-        transform = listener[3],
-        el = document.getElementById(id),
-        transform, s;
-    if (!el) return false;
-    transform = transform && out[transform];
-    s = (transform) ?
-      _.isArray(value) ? out.list(value, transform) : transform(value) :
-      value;
-    events._setMethods[method](s, el, property);
-    return true;
-  }),
-  dom: new EventDispatcher(function(listener, targetId) {
-    var func = listener[0],
-        args = listener[1],
-        id = listener[2],
-        method = listener[3],
-        property = listener[4],
-        el, value;
-    if (id === targetId) {
-      el = document.getElementById(id);
-      if (!el) return false;
-      value = events._getMethods[method](el, property);
-      model[func].apply(model, args.concat(value));
-    }
-    return true;
-  })
-}
-
-var domHandler = function(e) {
-  var e = e || event,
-      target = e.target || e.srcElement;
-  if (target.nodeType === 3) target = target.parentNode; // Fix for Safari bug
-  events.dom.trigger(e.type, target.id);
-}
-if (!isServer) {
-  _.each(['keyup', 'keydown'], function(item) {
-    document['on' + item] = domHandler;
-  });
-}
-
-var uniqueId = function() {
-  return '_' + (uniqueId._count++).toString(36);
-};
-uniqueId._count = 0;
-
-var model = {
-  _world: {
-    users: {
-      0: {
-        name: 'Nate',
-        picUrl: 'http://nateps.com/resume/nate_smith_92x92.jpg'
+    function(listener, targetId) {
+      var func = listener[0],
+          path = listener[1],
+          id = listener[2],
+          method = listener[3],
+          property = listener[4],
+          el, value;
+      if (id === targetId) {
+        el = document.getElementById(id);
+        if (!el) return false;
+        value = getMethods[method](el, property);
+        model[func].apply(null, [path, value]);
       }
-    },
-    messages: [],
-    session: {
-      userId: 0,
-      newComment: ''
+      return true;
     }
-  },
-  _send: function(method, args){
+  );
+  
+  var domHandler = function(e) {
+    var e = e || event,
+        target = e.target || e.srcElement;
+    if (target.nodeType === 3) target = target.parentNode; // Fix for Safari bug
+    events.trigger(e.type, target.id);
+  }
+  if (!isServer) {
+    _.each(['keyup', 'keydown'], function(item) {
+      document['on' + item] = domHandler;
+    });
+  }
+  
+  return that;
+})();
+
+var model = this.model = (function(){
+  var that = {},
+      world = {},
+      setMethods = {
+        attr: function(value, el, attr) {
+          el.setAttribute(attr, value);
+        },
+        prop: function(value, el, prop) {
+          el[prop] = value;
+        },
+        html: function(value, el) {
+          el.innerHTML = value;
+        }
+      };
+  
+  var events = that.events = new EventDispatcher(
+    function(pathName, listener) {
+      var obj = world,
+          path, i, prop, refName, keyName, ref, key, eventPath;
+      path = pathName.split('.');
+      for (i = 0; prop = path[i++];) {
+        obj = obj[prop];
+        if ((refName = obj._r) && (keyName = obj._k)) {
+          key = get(keyName);
+          ref = get(refName);
+          eventPath = [refName, key].concat(path.slice(i)).join('.');
+          // Register an event to update the other event handler when the
+          // reference key changes
+          events.bind(keyName, {_o: eventPath, _p: pathName, _l: listener});
+          // Bind the event to the dereferenced path
+          events.bind(eventPath, listener);
+          // Cancel the creation of an event to a path with a reference in it
+          return false;
+        }
+      }
+      return true;
+    },
+    function(listener, value) {
+      var id, method, property, transform, el, s,
+          oldPathName, pathName, listenerObj;
+      if (_.isArray(listener)) {
+        id = listener[0];
+        method = listener[1];
+        property = listener[2];
+        transform = listener[3];
+        el = document.getElementById(id);
+        if (!el) return false;
+        transform = transform && out[transform];
+        s = (transform) ?
+          _.isArray(value) ? out._list(value, transform) : transform(value) :
+          value;
+        setMethods[method](s, el, property);
+        return true;
+      } else if ((oldPathName = listener._o) && (pathName = listener._p) && (listenerObj = listener._l)) {
+        events.unbind(oldPathName, listenerObj);
+        events.bind(pathName, listenerObj);
+        // Remove this handler, since it will be replaced with a new handler
+        // in the bind action above
+      }
+      return false;
+    }
+  );
+  
+  var get = that.get = function(path) {
+    var obj = world,
+        i, prop, ref, key;
+    if (path) {
+      path = path.split('.');
+      for (i = 0; prop = path[i++];) {
+        obj = obj[prop];
+        if ((ref = obj._r) && (key = obj._k)) {
+          ref = get(ref);
+          key = get(key);
+          obj = ref[key];
+        }
+      }
+    }
+    return obj;
+  };
+  
+  var send = function(method, args){
     if (!isServer) {
       socket.send(
         JSON.stringify(
@@ -149,90 +202,110 @@ var model = {
         )
       );
     }
-  },
-  get: function(a0, a1, a2) {
-    var world = model._world;
-    switch (arguments.length) {
-      case 3:
-        return world[a0][a1][a2];
-      case 2:
-        return world[a0][a1];
-      case 1:
-        return world[a0];
-      case 0:
-        return world;
+  };
+  
+  var _set = that._set = function(path, value, silent) {
+    var obj = world,
+        eventPath = [],
+        i, prop, len, child, ref, key;
+    if (path) {
+      path = path.split('.');
+      len = path.length;
+      for (i = 0; prop = path[i++];) {
+        child = obj[prop];
+        if ((ref = child._r) && (key = child._k)) {
+          key = get(key);
+          eventPath = [ref, key];
+          ref = get(ref);
+          if (i === len) {
+            ref[key] = value;
+          } else {
+            obj = ref[key];
+          }
+        } else {
+          if (i === len) {
+            obj[prop] = value;
+          } else {
+            obj = child;
+          }
+          eventPath.push(prop);
+        }
+      }
     }
-    return null;
-  },
-  setSilent: function(a0, a1, a2, a3) {
-    var world = model._world;
-    switch (arguments.length) {
-      case 4:
-        world[a0][a1][a2] = a3;
-        break;
-      case 3:
-        world[a0][a1] = a2;
-        break;
-      case 2:
-        world[a0] = a1;
-        break;
-      case 1:
-        world = a0;
-    }
-  },
-  _set: function(a0, a1, a2, a3) {
-    model.setSilent.apply(model, _.toArray(arguments));
-    switch (arguments.length) {
-      case 4:
-        events.model.trigger(a0 + '.' + a1 + '.' + a2, a3);
-        break;
-      case 3:
-        events.model.trigger(a0 + '.' + a1, a2);
-        break;
-      case 2:
-        events.model.trigger(a0, a1);
-    }
-  },
-  set: function(a0, a1, a2, a3) {
-    model._set.apply(model, _.toArray(arguments));
-    model._send('set', arguments);
-  },
-  _push: function(name, value) {
-    var arr = model._world[name];
+    if (silent) return;
+    events.trigger(eventPath.join('.'), value);
+  };
+  var set = that.set = function(path, value) {
+    _set(path, value);
+    send('set', arguments);
+  };
+  var setSilent = that.setSilent = function(path, value) {
+    _set(path, value, true);
+  };
+  
+  var _push = that._push = function(name, value) {
+    var arr = world[name];
     arr.push(value);
-    events.model.trigger(name, arr);
-  },
-  push: function(name, value) {
+    events.trigger(name, arr);
+  };
+  var push = that.push = function(name, value) {
     model._push(name, value);
-    model._send('push', arguments);
+    send('push', arguments);
+  };
+  
+  that.ref = function(ref, key) {
+    return {_r: ref, _k: key};
+  };
+  that.init = function(value) {
+    world = value;
   }
-}
-this.model = model;
+  return that;
+})();
 
-var out = {
-  list: function(items, func) {
-    return _.reduce(items, function(memo, item) {
-      return memo + func(item);
+model.init({
+  users: {
+    0: {
+      name: 'Nate',
+      picUrl: 'http://nateps.com/resume/nate_smith_92x92.jpg'
+    }
+  },
+  messages: [],
+  session: {
+    userId: 0,
+    user: model.ref('users', 'session.userId'),
+    newComment: ''
+  }
+});
+
+var uniqueId = function() {
+  return '_' + (uniqueId._count++).toString(36);
+};
+uniqueId._count = 0;
+
+var out = this.out = {
+  _list: function(items, func) {
+    return _.reduce(items, function(memo, item, index) {
+      return memo + func(item, index);
     }, '');
   },
-  server: function() {
+  _server: function() {
     return {
       body: out.body(),
       script: 'uniqueId._count=' + uniqueId._count + ';' +
-      'events.model._names=' + JSON.stringify(events.model._names) + ';' +
-      'events.dom._names=' + JSON.stringify(events.dom._names) + ';' +
-      'model._world=' + JSON.stringify(model._world) + ';'
+      'model.events._names=' + JSON.stringify(model.events._names) + ';' +
+      'dom.events._names=' + JSON.stringify(dom.events._names) + ';' +
+      'model.init(' + JSON.stringify(model.get()) + ');'
     }
   },
   message: function(message, index) {
     var picId = uniqueId(),
         nameId = uniqueId(),
         commentId = uniqueId(),
-        user = model.get('users', message.userId);
+        user = model.get('users.' + message.userId);
 
-    events.model.bind('users.' + message.userId + '.picUrl', [picId, 'attr', 'src']);
-    events.model.bind('users.' + message.userId + '.name', [nameId, 'html']);
-    events.model.bind('messages.' + index + '.comment', [commentId, 'html']);
+    model.events.bind('users.' + message.userId + '.picUrl', [picId, 'attr', 'src']);
+    model.events.bind('users.' + message.userId + '.name', [nameId, 'html']);
+    model.events.bind('messages.' + index + '.comment', [commentId, 'html']);
 
     return '<li> \
       <img id=' + picId + ' src="' + user.picUrl + '" class=pic> \
@@ -241,36 +314,33 @@ var out = {
         <p id=' + commentId + '>' + message.comment + '</div>'
   },
   body: function() {
-    var session = model.get('session'),
-        userId = session.userId,
-        user = model.get('users', userId);
-
-    events.model.bind('messages', ['messageList', 'html', null, 'message']);
-    events.model.bind('users.' + userId + '.picUrl', ['inputPic', 'attr', 'src']);
-    events.model.bind('users.' + userId + '.name', ['inputName', 'attr', 'value']);
-    events.model.bind('session.newComment', ['commentInput', 'prop', 'value']);
+    model.events.bind('messages', ['messageList', 'html', null, 'message']);
+    model.events.bind('session.user.picUrl', ['inputPic', 'attr', 'src']);
+    model.events.bind('session.user.name', ['inputName', 'attr', 'value']);
+    model.events.bind('session.newComment', ['commentInput', 'prop', 'value']);
     
-    events.dom.bind('keyup', ['set', ['users', userId, 'name'], 'inputName', 'prop', 'value']);
-    events.dom.bind('keyup', ['setSilent', ['session', 'newComment'], 'commentInput', 'prop', 'value']);
+    dom.events.bind('keyup', ['set', 'session.user.name', 'inputName', 'prop', 'value']);
+    dom.events.bind('keyup', ['setSilent', 'session.newComment', 'commentInput', 'prop', 'value']);
+    dom.events.bind('keydown', ['set', 'session.user.name', 'inputName', 'prop', 'value']);
+    dom.events.bind('keydown', ['setSilent', 'session.newComment', 'commentInput', 'prop', 'value']);
 
-    return '<ul id=messageList>' + out.list(model.get('messages'), out.message) + '</ul> \
+    return '<ul id=messageList>' + out._list(model.get('messages'), out.message) + '</ul> \
       <div id=foot> \
-        <img id=inputPic src="' + user.picUrl + '" class=pic> \
+        <img id=inputPic src="' + model.get('session.user.picUrl') + '" class=pic> \
         <div id=inputs> \
-          <input id=inputName value="' + user.name + '"> <b>(your nickname)</b> \
+          <input id=inputName value="' + model.get('session.user.name') + '"> <b>(your nickname)</b> \
           <form id=inputForm action=javascript:postMessage()> \
-            <input id=commentInput value="' + session.newComment + '"> \
+            <input id=commentInput value="' + model.get('session.newComment') + '"> \
           </form> \
         </div> \
       </div>'
   }
 }
-this.out = out;
 
 var postMessage = function() {
   model.push('messages', {
-    userId: model.get('session', 'userId'),
-    comment: model.get('session', 'newComment')
+    userId: model.get('session.userId'),
+    comment: model.get('session.newComment')
   });
-  model.set('session', 'newComment', '');
+  model.set('session.newComment', '');
 }
