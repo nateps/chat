@@ -110,9 +110,15 @@ var server = http.createServer(function(req, res) {
 var socket = io.listen(server, {transports: ['websocket', 'htmlfile', 'xhr-multipart', 'xhr-polling', 'jsonp-polling']});
 socket.on('connection', function(client) {      
   client.on('message', function(message) {
-    var data = JSON.parse(message);
-    chat.model[data[0]].apply(null, data[1]);
-    client.broadcast(message);
+    var data = JSON.parse(message),
+        method = data[0],
+        args = data[1];
+    // Don't store or send to other clients if the model path contains a name
+    // that starts with an underscore
+    if (!/(^_)|(\._)/.test(args[0])) {
+      chat.model[method].apply(null, args);
+      client.broadcast(message);
+    }
   });
 });
 

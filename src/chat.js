@@ -173,6 +173,9 @@ var model = this.model = (function(){
       } else if ((oldPathName = listener._o) && (pathName = listener._p) && (listenerObj = listener._l)) {
         events.unbind(oldPathName, listenerObj);
         events.bind(pathName, listenerObj);
+        // Set the object to itself to trigger change event
+        model.set(pathName, model.get(pathName));
+        //events.trigger(pathName, model.get(pathName));
         // Remove this handler, since it will be replaced with a new handler
         // in the bind action above
       }
@@ -207,7 +210,7 @@ var model = this.model = (function(){
     }
   };
   
-  var _set = that._set = function(path, value, silent) {
+  var _set = that._set = function(path, value, silent, sendUpdate) {
     var obj = world,
         eventPath = [],
         i, prop, len, child, ref, key;
@@ -216,7 +219,7 @@ var model = this.model = (function(){
       len = path.length;
       for (i = 0; prop = path[i++];) {
         child = obj[prop];
-        if ((ref = child._r) && (key = child._k)) {
+        if (child && (ref = child._r) && (key = child._k)) {
           key = get(key);
           eventPath = [ref, key];
           ref = get(ref);
@@ -236,11 +239,12 @@ var model = this.model = (function(){
       }
     }
     if (silent) return;
-    events.trigger(eventPath.join('.'), value);
+    eventPath = eventPath.join('.');
+    events.trigger(eventPath, value);
+    if (sendUpdate) send('set', [eventPath, value]);
   };
   var set = that.set = function(path, value) {
-    _set(path, value);
-    send('set', arguments);
+    _set(path, value, false, true);
   };
   var setSilent = that.setSilent = function(path, value) {
     _set(path, value, true);
@@ -264,21 +268,6 @@ var model = this.model = (function(){
   }
   return that;
 })();
-
-model.init({
-  users: {
-    0: {
-      name: 'Nate',
-      picUrl: 'http://nateps.com/resume/nate_smith_92x92.jpg'
-    }
-  },
-  messages: [],
-  session: {
-    userId: 0,
-    user: model.ref('users', 'session.userId'),
-    newComment: ''
-  }
-});
 
 var uniqueId = function() {
   return '_' + (uniqueId._count++).toString(36);
@@ -522,6 +511,25 @@ var out = this.out = {
   }
 }
 
+model.init({
+  users: {
+    nate: {
+      name: 'Nate',
+      picUrl: 'http://nateps.com/resume/nate_smith_92x92.jpg'
+    },
+    chris: {
+      name: 'Chris',
+      picUrl: ''
+    }
+  },
+  messages: [],
+  _session: {
+    userId: 'nate',
+    user: model.ref('users', '_session.userId'),
+    newComment: ''
+  }
+});
+
 out.message = function(message, index) {
   return out._parse({
       userPicUrl: { model: 'users.' + message.userId + '.picUrl' },
@@ -539,9 +547,9 @@ out.message = function(message, index) {
 out.body = function() {
   return out._parse({
       messages: { model: 'messages', transform: 'message' },
-      userPicUrl: { model: 'session.user.picUrl' },
-      userName: { model: 'session.user.name' },
-      newComment: { model: 'session.newComment', silent: true }
+      userPicUrl: { model: '_session.user.picUrl' },
+      userName: { model: '_session.user.name' },
+      newComment: { model: '_session.newComment', silent: true }
     },
     '<ul id=messageList>{{{messages}}}</ul>' +
       '<div id=foot>' +
@@ -558,8 +566,8 @@ out.body = function() {
 
 var postMessage = function() {
   model.push('messages', {
-    userId: model.get('session.userId'),
-    comment: model.get('session.newComment')
+    userId: model.get('_session.userId'),
+    comment: model.get('_session.newComment')
   });
-  model.set('session.newComment', '');
+  model.set('_session.newComment', '');
 }
