@@ -41,22 +41,21 @@ var userImages = [
 ];
 var newUserId = 0;
 
-app.configure(function(){
-  app.use(app.router);
-  app.use(express.staticProvider('../public'));
-  app.use(express.cookieDecoder());
-  app.use(express.session());
-});
+app.use(express.staticProvider('../public'));
+app.use(express.cookieDecoder());
+app.use(express.session({ secret: 'steve_urkel' }));
+
 app.get('/', function(req, res) {
+  var userId = req.session.userId;
+  req.session.userId = userId = _.isUndefined(userId) ? newUserId++ : userId;
   fs.readFile('chat.html', 'utf8', function(err, html) {
     fs.readFile('chat.js', 'utf8', function(err, js) {
       var out, body;
-      chat.model.set('users.' + newUserId, {
-        name: 'User ' + (newUserId + 1),
-        picUrl: userImages[newUserId % 4]
+      chat.model.set('users.' + userId, {
+        name: 'User ' + (userId + 1),
+        picUrl: userImages[userId % 4]
       }, true);
-      chat.model.set('_session.userId', newUserId);
-      newUserId++;
+      chat.model.set('_session.userId', userId);
       out = chat.out._server();
       body = out.body + '<script>' + js + out.script + '</script>';
       html = html.replace('{{body}}', out.body)
