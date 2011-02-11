@@ -38,19 +38,55 @@ var chat = require('./chat');
 
 var underscore = fs.readFileSync('../lib/underscore_1.1.4.js');
 
+var userImages = [
+  '/images/user_red.png',
+  '/images/user_green.png',
+  '/images/user_blue.png',
+  '/images/user_gray.png',
+];
+var newUserId = 0;
+
 var getMap = {
   '/': function(req, res) {
     fs.readFile('chat.html', 'utf8', function(err, html) {
       fs.readFile('chat.js', 'utf8', function(err, js) {
-        var out = chat.out._server();
-        var body = out.body + '<script>' + js + out.script + '</script>';
+        var out, body;
+        chat.model.set('users.' + newUserId, {
+          name: 'User ' + (newUserId + 1),
+          picUrl: userImages[newUserId % 4]
+        }, true);
+        chat.model.set('_session.userId', newUserId);
+        newUserId++;
+        out = chat.out._server();
+        body = out.body + '<script>' + js + out.script + '</script>';
         html = html.replace('{{body}}', out.body)
           .replace('{{script}}', underscore + js + out.script);
         res.htmlResponse(html);
       });
     });
   },
+  '/images/user_red.png': function(req, res) {
+    fs.readFile('images/user_red.png', function(err, data) {
+      res.pngResponse(data);
+    });
+  },
+  '/images/user_green.png': function(req, res) {
+    fs.readFile('images/user_green.png', function(err, data) {
+      res.pngResponse(data);
+    });
+  },
+  '/images/user_blue.png': function(req, res) {
+    fs.readFile('images/user_blue.png', function(err, data) {
+      res.pngResponse(data);
+    });
+  },
+  '/images/user_gray.png': function(req, res) {
+    fs.readFile('images/user_gray.png', function(err, data) {
+      res.pngResponse(data);
+    });
+  },
 };
+
 var postMap = {
   // '/set': function(req, res) {
   //   var data = '';
@@ -87,6 +123,9 @@ http.ServerResponse.prototype.noContent = function() {
 http.ServerResponse.prototype.htmlResponse = function(body, code) {
   textResponse.call(this, body, 'text/html', code);
 };
+http.ServerResponse.prototype.pngResponse = function(body, code) {
+  textResponse.call(this, body, 'image/png', code);
+};
 http.ServerResponse.prototype.textResponse = function(body, code) {
   textResponse.call(this, body, 'text/plain', code);
 };
@@ -121,6 +160,7 @@ socket.on('connection', function(client) {
     }
   });
 });
+chat.setSocket(socket);
 
 server.listen(PORT, HOST);
 console.log('Server at http://' + (HOST || '127.0.0.1') + ':' + PORT.toString() + '/');

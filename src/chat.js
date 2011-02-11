@@ -1,16 +1,20 @@
 "use strict";
 
 var isServer = typeof window === 'undefined';
+var socket;
 
 if (isServer) {
   var _ = require('underscore');
 } else {
-  var socket = new io.Socket(null, {port: 8001});
+  socket = new io.Socket(null, {port: 8001});
   socket.connect();
   socket.on('message', function(message) {
     message = JSON.parse(message);
     model['_' + message[0]].apply(null, message[1]);
   });
+}
+this.setSocket = function(s) {
+  socket = s;
 }
 
 var EventDispatcher = function(bindCallback, triggerCallback) {
@@ -174,8 +178,7 @@ var model = this.model = (function(){
         events.unbind(oldPathName, listenerObj);
         events.bind(pathName, listenerObj);
         // Set the object to itself to trigger change event
-        model.set(pathName, model.get(pathName));
-        //events.trigger(pathName, model.get(pathName));
+        set(pathName, get(pathName));
         // Remove this handler, since it will be replaced with a new handler
         // in the bind action above
       }
@@ -200,17 +203,20 @@ var model = this.model = (function(){
     return obj;
   };
   
-  var send = function(method, args){
-    if (!isServer) {
-      socket.send(
-        JSON.stringify(
-          [method, _.toArray(args)]
-        )
-      );
+  var send = function(method, args, broadcast){
+    var message = JSON.stringify(
+      [method, _.toArray(args)]
+    );
+    if (isServer) {
+      if (broadcast && socket) {
+        socket.broadcast(message);
+      }
+    } else {
+      socket.send(message);
     }
   };
   
-  var _set = that._set = function(path, value, silent, sendUpdate) {
+  var _set = that._set = function(path, value, silent, sendUpdate, broadcast) {
     var obj = world,
         eventPath = [],
         i, prop, len, child, ref, key;
@@ -241,23 +247,23 @@ var model = this.model = (function(){
     if (silent) return;
     eventPath = eventPath.join('.');
     events.trigger(eventPath, value);
-    if (sendUpdate) send('set', [eventPath, value]);
+    if (sendUpdate) send('set', [eventPath, value], broadcast);
   };
-  var set = that.set = function(path, value) {
-    _set(path, value, false, true);
+  var set = that.set = function(path, value, broadcast) {
+    _set(path, value, false, true, broadcast);
   };
   var setSilent = that.setSilent = function(path, value) {
     _set(path, value, true);
   };
   
-  var _push = that._push = function(name, value) {
+  var _push = that._push = function(name, value, sendUpdate, broadcast) {
     var arr = world[name];
     arr.push(value);
     events.trigger(name, arr);
+    if (sendUpdate) send('push', [name, value], broadcast);
   };
-  var push = that.push = function(name, value) {
-    model._push(name, value);
-    send('push', arguments);
+  var push = that.push = function(name, value, broadcast) {
+    _push(name, value, true, broadcast);
   };
   
   that.ref = function(ref, key) {
@@ -265,7 +271,7 @@ var model = this.model = (function(){
   };
   that.init = function(value) {
     world = value;
-  }
+  };
   return that;
 })();
 
@@ -420,6 +426,9 @@ var out = this.out = {
     }, '');
   },
   _server: function() {
+    model.events._names = {};
+    dom.events._names = {};
+    uniqueId._count = 0;
     return {
       body: out.body(),
       script: 'uniqueId._count=' + uniqueId._count + ';' +
@@ -512,19 +521,10 @@ var out = this.out = {
 }
 
 model.init({
-  users: {
-    nate: {
-      name: 'Nate',
-      picUrl: 'http://nateps.com/resume/nate_smith_92x92.jpg'
-    },
-    chris: {
-      name: 'Chris',
-      picUrl: ''
-    }
-  },
+  users: {},
   messages: [],
   _session: {
-    userId: 'nate',
+    userId: 0,
     user: model.ref('users', '_session.userId'),
     newComment: ''
   }
