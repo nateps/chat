@@ -555,7 +555,7 @@ out.body = function() {
       '<div id=foot>' +
         '<img id=inputPic src="{{{userPicUrl}}}" class=pic>' +
         '<div id=inputs>' +
-          '<input id=inputName value="{{userName}}"> <b>(your nickname)</b>' +
+          '<input id=inputName value="{{userName}}">' +
           '<form id=inputForm action=javascript:postMessage()>' +
             '<input id=commentInput value="{{newComment}}">' +
           '</form>' +
@@ -570,4 +570,5 @@ var postMessage = function() {
     comment: model.get('_session.newComment')
   });
   model.set('_session.newComment', '');
+  window.scrollBy(0,999);
 }
