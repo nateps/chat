@@ -143,6 +143,7 @@ var model = this.model = (function(){
       path = pathName.split('.');
       for (i = 0; prop = path[i++];) {
         obj = obj[prop];
+        if (_.isUndefined(obj)) return false; // Remove bad event handler
         if ((refName = obj._r) && (keyName = obj._k)) {
           key = get(keyName);
           ref = get(refName);
@@ -193,6 +194,7 @@ var model = this.model = (function(){
       path = path.split('.');
       for (i = 0; prop = path[i++];) {
         obj = obj[prop];
+        if (_.isUndefined(obj)) return null; // Return null if not found
         if ((ref = obj._r) && (key = obj._k)) {
           ref = get(ref);
           key = get(key);
@@ -280,6 +282,10 @@ var uniqueId = function() {
 };
 uniqueId._count = 0;
 
+var arrayLast = function() {
+  return this[this.length - 1];
+}
+
 // HTML Parser By John Resig (ejohn.org)
 // http://ejohn.org/blog/pure-javascript-html-parser/
 // Original code by Erik Arvidsson, Mozilla Public License
@@ -297,7 +303,7 @@ var htmlParser = function(html, handler) {
       // Elements that close themselves when left open
       closeSelf = makeMap('colgroup,dd,dt,li,options,p,td,tfoot,th,thead,tr'),
       // Attributes that have their values filled in (Ex: disabled="disabled")
-      fillAttrs = makeMap('checked,compact,declare,defer,disabled,ismap,multiple,nohref,noresize,noshade,nowrap,readonly,selected'),
+      fillAttrs = makeMap('silent,checked,compact,declare,defer,disabled,ismap,multiple,nohref,noresize,noshade,nowrap,readonly,selected'),
       // Special Elements (can contain anything)
       special = makeMap("script,style"),
       stack = [],
@@ -437,62 +443,76 @@ var out = this.out = {
       'model.init(' + JSON.stringify(model.get()) + ');'
     }
   },
-  _parse: function(data, template) {
+  _parse: function(template) {
     var stack = [],
-        placeholder = /^(\{{2,3})(\w+)\}{2,3}$/,
-        html;
+        events = [],
+        html = [''],
+        htmlIndex = 0,
+        placeholder = /^(\{{2,3})(\w+)\}{2,3}$/;
     stack.last = function() {
       return this[this.length - 1];
     };
-    function getModelText(datum, escaped) {
-      var obj = model.get(datum.model),
-          transform = datum.transform;
-      return (_.isArray(obj) && transform) ? out._list(obj, out[transform]) : obj;
+    
+    function modelText(name, escaped) {
+      return function(data) {
+        var datum = data[name],
+            obj = model.get(datum.model);
+        return (_.isArray(obj) && datum.transform) ?
+          out._list(obj, out[datum.transform]) : obj;
+      }
     }
-
+    
     htmlParser(template, {
       start: function(tag, attrs) {
-        var match, datum, escaped, method, domArgs;
         _.each(attrs, function(value, key) {
+          var match, name, escaped, method, setMethod;
           match = placeholder.exec(value);
           if (match) {
-            hasPlaceholder = true;
             escaped = match[1] === '{{';
-            datum = data[match[2]];
+            name = match[2];
             if (_.isUndefined(attrs.id)) {
-              attrs.id = uniqueId();
+              attrs.id = function() { return attrs._id = uniqueId(); };
             }
             method = 'attr';
             if (tag === 'input' && key === 'value') {
-              domArgs = ['set', datum.model, attrs.id, 'prop', 'value'];
               method = 'propLazy';
-              if (datum.silent) {
-                domArgs[0] = 'setSilent';
+              setMethod = 'set';
+              if (attrs.silent) {
                 method = 'prop';
+                setMethod = 'setSilent';
               }
-              dom.events.bind('keyup', domArgs);
-              dom.events.bind('keydown', domArgs);
+              events.push(function(data) {
+                var domArgs = [setMethod, data[name].model, attrs._id || attrs.id, 'prop', 'value'];
+                dom.events.bind('keyup', domArgs);
+                dom.events.bind('keydown', domArgs);
+              });
             }
-            model.events.bind(datum.model, [attrs.id, method, key]);
-            attrs[key] = getModelText(datum, escaped);
+            events.push(function(data) {
+              model.events.bind(data[name].model, [attrs._id || attrs.id, method, key]);
+            });
+            attrs[key] = modelText(name, escaped);
           }
         });
         stack.push(['start', tag, attrs]);
       },
       chars: function(text) {
         var last = stack.last(),
-            attrs, match, datum, escaped;      
+            attrs, match, name, escaped;
         match = placeholder.exec(text);
         if (match) {
           escaped = match[1] === '{{';
-          datum = data[match[2]];
-          text = getModelText(datum, escaped);
+          name = match[2];
+          text = modelText(name, escaped);
           if (last[0] === 'start') {
             attrs = last[2];
             if (_.isUndefined(attrs.id)) {
-              attrs.id = uniqueId();
+              attrs.id = function() { return attrs._id = uniqueId(); };
             }
-            model.events.bind(datum.model, [attrs.id, 'html', null, datum.transform]);
+            events.push(function(data) {
+              model.events.bind(data[name].model,
+                [attrs._id || attrs.id, 'html', null, data[name].transform]
+              );
+            });
           }
         }
         stack.push(['chars', text]);
@@ -501,22 +521,60 @@ var out = this.out = {
         stack.push(['end', tag]);
       }
     });
-
-    html = _.reduce(stack, function(memo, item) {
+    
+    _.each(stack, function(item) {
+      function pushValue(value) {
+        if (_.isFunction(value)) {
+          htmlIndex = html.push(value, '') - 1;
+        } else {
+          html[htmlIndex] += value;
+        }
+      }
       switch (item[0]) {
         case 'start':
-          return memo + '<' + item[1] +
-            _.reduce(item[2], function(attrs, value, key) {
-              return attrs + ' ' + key + '="' + value + '"';
-            }, '') + '>';
+          html[htmlIndex] += '<' + item[1];
+          _.each(item[2], function(value, key) {
+            html[htmlIndex] += ' ' + key + '="';
+            pushValue(value);
+            html[htmlIndex] += '"';
+          });
+          html[htmlIndex] += '>';
+          return;
         case 'chars':
-          return memo + item[1];
+          pushValue(item[1]);
+          return;
         case 'end':
-          return memo + '</' + item[1] + '>';
+          html[htmlIndex] += '</' + item[1] + '>';
       }
-    }, '');
-
-    return html;
+    });
+    
+    return function(data) {
+      var rendered = _.reduce(html, function(memo, item) {
+        return memo + (_.isFunction(item) ? item(data) : item);
+      }, '');
+      _.each(events, function(item) { item(data); });
+      return rendered;
+    };
+  },
+  _make: function(data, template, after) {
+    var render = out._parse(template);
+    return _.isFunction(data) ?
+      ((after && !isServer) ?
+        function() {
+          setTimeout(after, 0);
+          return render(data.apply(null, arguments));
+        } :
+        function() {
+          return render(data.apply(null, arguments));
+        }) :
+      ((after && !isServer) ?
+        function() {
+          setTimeout(after, 0);
+          return render(data);
+        } :
+        function() {
+          return render(data);
+        });
   }
 }
 
@@ -530,39 +588,39 @@ model.init({
   }
 });
 
-out.message = function(message, index) {
-  return out._parse({
-      userPicUrl: { model: 'users.' + message.userId + '.picUrl' },
-      userName: { model: 'users.' + message.userId + '.name' },
+out.message = out._make(
+  function(item, index) {
+    return {
+      userPicUrl: { model: 'users.' + item.userId + '.picUrl' },
+      userName: { model: 'users.' + item.userId + '.name' },
       comment: { model: 'messages.' + index + '.comment' }
-    },
-    '<li><img src="{{{userPicUrl}}}" class=pic>' +
-      '<div class=message>' +
-        '<p><b>{{userName}}</b>' +
-        '<p>{{comment}}' +
-      '</div>'
-  );
-};
+    };
+  },
+  '<li><img src="{{{userPicUrl}}}" class=pic>' +
+    '<div class=message>' +
+      '<p><b>{{userName}}</b>' +
+      '<p>{{comment}}' +
+    '</div>',
+  function() { window.scrollBy(0,9999); }
+);
 
-out.body = function() {
-  return out._parse({
-      messages: { model: 'messages', transform: 'message' },
-      userPicUrl: { model: '_session.user.picUrl' },
-      userName: { model: '_session.user.name' },
-      newComment: { model: '_session.newComment', silent: true }
-    },
-    '<ul id=messageList>{{{messages}}}</ul>' +
-      '<div id=foot>' +
-        '<img id=inputPic src="{{{userPicUrl}}}" class=pic>' +
-        '<div id=inputs>' +
-          '<input id=inputName value="{{userName}}">' +
-          '<form id=inputForm action=javascript:postMessage()>' +
-            '<input id=commentInput value="{{newComment}}">' +
-          '</form>' +
-        '</div>' +
-      '</div>'
-  );
-};
+out.body = out._make({
+    messages: { model: 'messages', transform: 'message' },
+    userPicUrl: { model: '_session.user.picUrl' },
+    userName: { model: '_session.user.name' },
+    newComment: { model: '_session.newComment' }
+  },
+  '<ul id=messageList>{{{messages}}}</ul>' +
+    '<div id=foot>' +
+      '<img id=inputPic src="{{{userPicUrl}}}" class=pic>' +
+      '<div id=inputs>' +
+        '<input id=inputName value="{{userName}}">' +
+        '<form id=inputForm action=javascript:postMessage()>' +
+          '<input id=commentInput value="{{newComment}}" silent>' +
+        '</form>' +
+      '</div>' +
+    '</div>'
+);
 
 var postMessage = function() {
   model.push('messages', {
@@ -570,5 +628,4 @@ var postMessage = function() {
     comment: model.get('_session.newComment')
   });
   model.set('_session.newComment', '');
-  window.scrollBy(0,999);
 }
