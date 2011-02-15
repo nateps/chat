@@ -2,7 +2,7 @@ var express = require('express');
 var fs = require('fs');
 var io = require('socket.io');
 var _ = require('underscore');
-var chat = require('./chat');
+var chat = require('./src/chat');
 
 // var mongo = require('../lib/node-mongodb-native/lib/mongodb');
 // var mongoHost = process.env['MONGO_NODE_DRIVER_HOST'] != null ? process.env['MONGO_NODE_DRIVER_HOST'] : 'localhost';
@@ -32,7 +32,7 @@ var chat = require('./chat');
 
 var app = express.createServer();
 
-var underscore = fs.readFileSync('../lib/underscore_1.1.4.js');
+var underscore = fs.readFileSync('lib/underscore_1.1.4.js');
 var userImages = [
   '/images/user_red.png',
   '/images/user_green.png',
@@ -41,15 +41,15 @@ var userImages = [
 ];
 var newUserId = 0;
 
-app.use(express.staticProvider('../public'));
+app.use(express.staticProvider('public'));
 app.use(express.cookieDecoder());
 app.use(express.session({ secret: 'steve_urkel' }));
 
 app.get('/', function(req, res) {
   var userId = req.session.userId;
   req.session.userId = userId = _.isUndefined(userId) ? newUserId++ : userId;
-  fs.readFile('chat.html', 'utf8', function(err, html) {
-    fs.readFile('chat.js', 'utf8', function(err, js) {
+  fs.readFile('src/chat.html', 'utf8', function(err, html) {
+    fs.readFile('src/chat.js', 'utf8', function(err, js) {
       var out, body;
       chat.model.set('users.' + userId, {
         name: 'User ' + (userId + 1),

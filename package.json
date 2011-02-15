@@ -4,7 +4,8 @@
   "version": "0.0.0",
   "author": "Nate Smith",
   "directories": {
-    "lib": "lib"
+    "lib": "lib",
+    "src": "src"
   },
   "engines": {
     "node": "*"
