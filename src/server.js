@@ -33,6 +33,8 @@ var chat = require('./src/chat');
 var app = express.createServer();
 
 var underscore = fs.readFileSync('lib/underscore_1.1.4.js');
+var vers = fs.readFileSync('src/vers.js');
+
 var userImages = [
   '/images/user_red.png',
   '/images/user_green.png',
@@ -51,15 +53,16 @@ app.get('/', function(req, res) {
   fs.readFile('src/chat.html', 'utf8', function(err, html) {
     fs.readFile('src/chat.js', 'utf8', function(err, js) {
       var out, body;
-      chat.model.set('users.' + userId, {
-        name: 'User ' + (userId + 1),
-        picUrl: userImages[userId % 4]
-      }, true);
+      if (chat.model.get('users.' + userId) === null) {
+        chat.model.set('users.' + userId, {
+          name: 'User ' + (userId + 1),
+          picUrl: userImages[userId % 4]
+        }, true);
+      };
       chat.model.set('_session.userId', userId);
-      out = chat.out._server();
-      body = out.body + '<script>' + js + out.script + '</script>';
+      out = chat.view.server();
       html = html.replace('{{body}}', out.body)
-        .replace('{{script}}', underscore + js + out.script);
+        .replace('{{script}}', underscore + vers + js + out.script);
       res.send(html);
     });
   });
