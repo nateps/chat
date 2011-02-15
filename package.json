@@ -1,0 +1,17 @@
+{
+  "name": "chat",
+  "description": "Demo chat application built on vers framework.",
+  "version": "0.0.0",
+  "author": "Nate Smith",
+  "directories": {
+    "lib": "lib"
+  },
+  "engines": {
+    "node": "*"
+  },
+  "dependencies": {
+    "express": "*",
+    "underscore": "*",
+    "socket.io": "*"
+  }
+}
