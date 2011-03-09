@@ -6,6 +6,7 @@ if (typeof window === 'undefined') {
 }
 var model = vers.model,
     view = vers.view;
+
 if (typeof window === 'undefined') {
   model.init({
     users: {},
@@ -18,6 +19,9 @@ if (typeof window === 'undefined') {
   });
 }
 
+var t = new Date();
+
+for (var i = 0; i < 1000; i++) {
 view.make('message',
   function(item, index) {
     return {
@@ -51,6 +55,9 @@ view.make('body', {
       '</div>' +
     '</div>'
 );
+}
+
+console.log((new Date()) - t);
 
 function postMessage() {
   model.push('messages', {
