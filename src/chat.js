@@ -19,8 +19,6 @@ if (typeof window === 'undefined') {
   });
 }
 
-var t = new Date();
-
 for (var i = 0; i < 1000; i++) {
 view.make('message',
   function(item, index) {
@@ -56,8 +54,6 @@ view.make('body', {
     '</div>'
 );
 }
-
-console.log((new Date()) - t);
 
 function postMessage() {
   model.push('messages', {

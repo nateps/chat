@@ -287,22 +287,23 @@
   // http://ejohn.org/blog/pure-javascript-html-parser/
   // Original code by Erik Arvidsson, Mozilla Public License
   // http://erik.eae.net/simplehtmlparser/simplehtmlparser.js
- 
+  
+  
   var htmlParser = (function() {
     // Regular Expressions for parsing
     var startTag = /^<(\w+)((?:\s+\w+(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|[^>\s]+))?)*)\s*(\/?)>/,
         endTag = /^<\/(\w+)[^>]*>/,
         attr = /(\w+)(?:\s*=\s*(?:(?:"((?:\\.|[^"])*)")|(?:'((?:\\.|[^'])*)')|([^>\s]+)))?/g,
         // HTML elements
-        empty = makeMap('area,base,basefont,br,col,frame,hr,img,input,isindex,link,meta,param,embed'),
-        block = makeMap('address,applet,blockquote,button,center,dd,del,dir,div,dl,dt,fieldset,form,frameset,hr,iframe,ins,isindex,li,map,menu,noframes,noscript,object,ol,p,pre,script,table,tbody,td,tfoot,th,thead,tr,ul'),
-        inline = makeMap('a,abbr,acronym,applet,b,basefont,bdo,big,br,button,cite,code,del,dfn,em,font,i,iframe,img,input,ins,kbd,label,map,object,q,s,samp,script,select,small,span,strike,strong,sub,sup,textarea,tt,u,var'),
+        empty = makeMap('area,base,br,col,embed,hr,img,input,link,meta,param,source'),
+        block = makeMap('address,area,article,aside,blockquote,body,caption,colgroup,dd,details,div,dl,dt,fieldset,figcaption,figure,footer,form,h1,h2,h3,h4,h5,h6,head,header,hgroup,hr,html,legend,li,link,menu,meta,nav,ol,p,param,pre,section,summary,table,tbody,td,tfoot,th,thead,title,tr,ul'),
+        inline = makeMap('a,abbr,audio,b,base,bdo,br,button,canvas,cite,code,command,embed,datalist,del,dfn,em,i,iframe,img,input,ins,keygen,kbd,label,map,mark,meter,noscript,object,optgroup,option,output,progress,q,rp,rt,ruby,samp,select,source,span,strike,strong,sub,sup,textarea,time,var,video,wbr'),
         // Elements that close themselves when left open
-        closeSelf = makeMap('colgroup,dd,dt,li,options,p,td,tfoot,th,thead,tr'),
+        closeSelf = makeMap('colgroup,dd,dt,li,option,p,td,tfoot,th,thead,tr'),
         // Attributes that have their values filled in (Ex: disabled="disabled")
         fillAttrs = makeMap('silent,checked,compact,declare,defer,disabled,ismap,multiple,nohref,noresize,noshade,nowrap,readonly,selected'),
         // Special Elements (can contain anything)
-        special = makeMap("script,style");
+        special = makeMap('script,style');
   
     function makeMap(list) {
       return _.reduce(list.split(','), function(memo, item) {
@@ -312,10 +313,9 @@
     }
     
     return function(html, handler) {
-      var commentHandler = handler.comment,
-          charsHandler = handler.chars,
-          startHandler = handler.start,
-          endHandler = handler.end,
+      var charsHandler = handler && handler.chars,
+          startHandler = handler && handler.start,
+          endHandler = handler && handler.end,
           stack = [],
           last, index, chars, match;
       
@@ -335,17 +335,15 @@
         unary = empty[tagName] || !!unary;
         if (!unary) stack.push(tagName);
 
-        if (startHandler) {
-          var attrs = {};
-          rest.replace(attr, function(match, name) {
-            var value = arguments[2] ? arguments[2] :
-              arguments[3] ? arguments[3] :
-              arguments[4] ? arguments[4] :
-              fillAttrs[name] ? name : '';
-            attrs[name] = value;
-          });
-          startHandler(tagName, attrs, unary);
-        }
+        var attrs = {};
+        rest.replace(attr, function(match, name) {
+          var value = arguments[2] ? arguments[2] :
+            arguments[3] ? arguments[3] :
+            arguments[4] ? arguments[4] :
+            fillAttrs[name] ? name : '';
+          attrs[name] = value;
+        });
+        if (startHandler) startHandler(tagName, attrs, unary);
       }
 
       function parseEndTag(tag, tagName) {
@@ -360,34 +358,37 @@
         }
         if (pos >= 0) {
           // Close all the open elements, up the stack
-          if (endHandler) {
-            for (var i = stack.length - 1; i >= pos; i--) {
-              endHandler(stack[i]);
-            }
+          for (var i = stack.length - 1; i >= pos; i--) {
+            if (endHandler) endHandler(stack[i]);
           }
           // Remove the open elements from the stack
           stack.length = pos;
         }
       }
       
+      // Remove all comments
+      html = html.replace(/<!--(.*?)-->/g, '')
+        .replace(/<!\[CDATA\[(.*?)]]>/g, '');
+      
       while (html) {
         last = html;
         chars = true;
     
-        // Make sure we're not in a script or style element
-        if (!stack.last() || !special[stack.last()]) {
-
-          // Comment
-          if (html.indexOf('<!--') === 0) {
-            index = html.indexOf('-->');
-            if (index >= 0) {
-              if (commentHandler) commentHandler(html.substring(4, index));
-              html = html.substring(index + 3);
-              chars = false;
+        // Special elements include script and style elements
+        if (special[stack.last()]) {
+          
+          html = html.replace(new RegExp('(.*)<\/' + stack.last() + '[^>]*>'), 
+            function(all, text){
+              if (charsHandler) charsHandler(text);
+              return '';
             }
-
+          );
+          parseEndTag('', stack.last());
+          
+        } else {
+          
           // End tag
-          } else if (html.indexOf('</') === 0) {
+          if (html[0] === '<' && html[1] === '/') {
             match = html.match(endTag);
             if (match) {
               html = html.substring(match[0].length);
@@ -396,7 +397,7 @@
             }
 
           // Start tag
-          } else if (html.indexOf('<') === 0) {
+          } else if (html[0] === '<') {
             match = html.match(startTag);
             if (match) {
               html = html.substring(match[0].length);
@@ -412,14 +413,6 @@
             if (charsHandler) charsHandler(text);
           }
 
-        } else {
-          html = html.replace(new RegExp('(.*)<\/' + stack.last() + '[^>]*>'), function(all, text){
-            text = text.replace(/<!--(.*?)-->/g, '$1')
-              .replace(/<!\[CDATA\[(.*?)]]>/g, '$1');
-            if (charsHandler) charsHandler(text);
-            return '';
-          });
-          parseEndTag('', stack.last());
         }
     
         if (html === last) {
@@ -450,7 +443,8 @@
           events = [],
           html = [''],
           htmlIndex = 0,
-          placeholder = /^(\{{2,3})(\w+)\}{2,3}$/;
+          placeholder = /^(\{{2,3})(\w+)\}{2,3}$/,
+          elementParse;
     
       function modelText(name, escaped) {
         return function(data) {
@@ -459,7 +453,31 @@
           return datum.view ? get(datum.view, obj) : obj;
         }
       }
-    
+      
+      elementParse = {
+        input: function(attr, attrs, name) {
+          var method, setMethod, domArgs;
+          if (attr === 'value') {
+            method = 'propLazy';
+            setMethod = 'set';
+            if (attrs.silent) {
+              method = 'prop';
+              setMethod = 'setSilent';
+              // This need not be in the HTML output
+              delete attrs.silent;
+            }
+            events.push(function(data) {
+              domArgs = [setMethod, data[name].model, attrs._id || attrs.id, 'prop', 'value'];
+              dom.events.bind('keyup', domArgs);
+              dom.events.bind('keydown', domArgs);
+            });
+          } else {
+            method = 'attr';
+          }
+          return method;
+        }
+      }
+      
       htmlParser(template, {
         start: function(tag, attrs) {
           _.each(attrs, function(value, key) {
@@ -471,22 +489,9 @@
               if (_.isUndefined(attrs.id)) {
                 attrs.id = function() { return attrs._id = uniqueId(); };
               }
-              method = 'attr';
-              if (tag === 'input' && key === 'value') {
-                method = 'propLazy';
-                setMethod = 'set';
-                if (attrs.silent) {
-                  method = 'prop';
-                  setMethod = 'setSilent';
-                  // This need not be in the HTML output
-                  delete attrs.silent;
-                }
-                events.push(function(data) {
-                  var domArgs = [setMethod, data[name].model, attrs._id || attrs.id, 'prop', 'value'];
-                  dom.events.bind('keyup', domArgs);
-                  dom.events.bind('keydown', domArgs);
-                });
-              }
+              method = (tag in elementParse) ?
+                method = elementParse[tag](key, attrs, name) :
+                'attr';
               events.push(function(data) {
                 model.events.bind(data[name].model, [attrs._id || attrs.id, method, key]);
               });
