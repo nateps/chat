@@ -3,6 +3,7 @@ var fs = require('fs');
 var io = require('socket.io');
 var _ = require('underscore');
 var chat = require('./chat');
+var vers = require('../lib/vers');
 
 // var mongo = require('../lib/node-mongodb-native/lib/mongodb');
 // var mongoHost = process.env['MONGO_NODE_DRIVER_HOST'] != null ? process.env['MONGO_NODE_DRIVER_HOST'] : 'localhost';
@@ -30,19 +31,25 @@ var chat = require('./chat');
 //   }
 // };
 
-var app = express.createServer();
-
+var NODE_PATH = '/usr/local/lib/node';
 var underscore = fs.readFileSync('lib/underscore_1.1.4.js');
-var vers = fs.readFileSync('src/vers.js');
+var transporter = fs.readFileSync(NODE_PATH + '/.npm/transporter/active/package/lib/receiver.js');
 
 var userImages = [
   '/images/user_red.png',
   '/images/user_green.png',
   '/images/user_blue.png',
   '/images/user_gray.png',
+  '/images/user_darkpurple.png',
+  '/images/user_grey.png',
+  '/images/user_lightblue.png',
+  '/images/user_orange.png',
+  '/images/user_pink.png',
+  '/images/user_yellow.png',
 ];
 var newUserId = 0;
 
+var app = express.createServer();
 app.use(express.staticProvider('public'));
 app.use(express.cookieDecoder());
 app.use(express.session({ secret: 'steve_urkel' }));
@@ -56,13 +63,13 @@ app.get('/', function(req, res) {
       if (chat.model.get('users.' + userId) === null) {
         chat.model.set('users.' + userId, {
           name: 'User ' + (userId + 1),
-          picUrl: userImages[userId % 4]
+          picUrl: userImages[userId % 10]
         }, true);
       };
       chat.model.set('_session.userId', userId);
       out = chat.view.server();
       html = html.replace('{{body}}', out.body)
-        .replace('{{script}}', underscore + vers + js + out.script);
+        .replace('{{script}}', underscore + transporter); // + vers + js + out.script
       res.send(html);
     });
   });
@@ -84,6 +91,6 @@ socket.on('connection', function(client) {
     }
   });
 });
-chat.setSocket(socket);
+chat.model.setSocket(socket);
 
 app.listen(8001);

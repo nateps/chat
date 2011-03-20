@@ -1,11 +1,7 @@
-if (typeof window === 'undefined') {
-  var vers = require('./vers');
-  exports.model = vers.model;
-  exports.view = vers.view;
-  exports.setSocket = vers.setSocket;
-}
-var model = vers.model,
-    view = vers.view;
+var vers = require('../lib/vers');
+var model = exports.model = vers.model;
+var view = exports.view = vers.view;
+exports.setSocket = vers.setSocket;
 
 if (typeof window === 'undefined') {
   model.init({
