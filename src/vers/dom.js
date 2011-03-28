@@ -1,5 +1,5 @@
-var _ = require('underscore'),
-    EventDispatcher = require('./EventDispatcher').EventDispatcher,
+require('./utils')((function(){return this})());
+var EventDispatcher = require('./EventDispatcher'),
     getMethods = {
       attr: function(el, attr) {
         return el.getAttribute(attr);
@@ -11,9 +11,13 @@ var _ = require('underscore'),
         return el.innerHTML;
       }
     },
-    isServer = typeof window === 'undefined';
+    model;
 
-var events = this.events = new EventDispatcher(
+exports.setModel = function(o) {
+  model = o;
+}
+
+var events = exports.events = new EventDispatcher(
   function(name, listener) {
     return true;
   },
@@ -40,8 +44,8 @@ var domHandler = function(e) {
   if (target.nodeType === 3) target = target.parentNode; // Fix for Safari bug
   events.trigger(e.type, target.id);
 }
-if (!isServer) {
-  _.each(['keyup', 'keydown'], function(item) {
+if (!onServer) {
+  ['keyup', 'keydown'].forEach(function(item) {
     document['on' + item] = domHandler;
   });
 }

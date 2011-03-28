@@ -1,21 +1,19 @@
-var vers = require('../lib/vers');
-var model = exports.model = vers.model;
-var view = exports.view = vers.view;
+var vers = require('./vers'),
+    dom = exports.dom = vers.dom,
+    model = exports.model = vers.model,
+    view = exports.view = vers.view;
 exports.setSocket = vers.setSocket;
 
-if (typeof window === 'undefined') {
-  model.init({
-    users: {},
-    messages: [],
-    _session: {
-      userId: 0,
-      user: model.ref('users', '_session.userId'),
-      newComment: ''
-    }
-  });
-}
+model.init({
+  users: {},
+  messages: [],
+  _session: {
+    userId: 0,
+    user: model.ref('users', '_session.userId'),
+    newComment: ''
+  }
+});
 
-for (var i = 0; i < 1000; i++) {
 view.make('message',
   function(item, index) {
     return {
@@ -43,15 +41,14 @@ view.make('body', {
       '<img id=inputPic src="{{{userPicUrl}}}" class=pic>' +
       '<div id=inputs>' +
         '<input id=inputName value="{{userName}}">' +
-        '<form id=inputForm action=javascript:postMessage()>' +
+        '<form id=inputForm action=javascript:chat.postMessage()>' +
           '<input id=commentInput value="{{newComment}}" silent>' +
         '</form>' +
       '</div>' +
     '</div>'
 );
-}
 
-function postMessage() {
+exports.postMessage = function() {
   model.push('messages', {
     userId: model.get('_session.userId'),
     comment: model.get('_session.newComment')

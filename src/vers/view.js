@@ -1,9 +1,7 @@
-var _ = require('underscore'),
-    htmlParser = require('./htmlParser'),
-    isServer = typeof window === 'undefined',
+require('./utils')((function(){return this})());
+var htmlParser = require('./htmlParser'),
     views = {},
-    model,
-    dom;
+    model, dom;
 
 exports.setModel = function(o) {
   model = o;
@@ -20,7 +18,7 @@ uniqueId._count = 0;
 var get = this._get = function(func, obj) {
   func = views[func];
   return (func) ?
-    (_.isArray(obj) ? _.reduce(obj, function(memo, item, index) {
+    (Array.isArray(obj) ? obj.reduce(function(memo, item, index) {
       return memo + func(item, index);
     }, '') : func(obj)) :
     null;
@@ -68,13 +66,13 @@ function parse(template) {
   
   htmlParser.parse(template, {
     start: function(tag, attrs) {
-      _.each(attrs, function(value, key) {
+      forEach(attrs, function(key, value) {
         var match, name, escaped, method, setMethod;
         match = placeholder.exec(value);
         if (match) {
           escaped = match[1] === '{{';
           name = match[2];
-          if (_.isUndefined(attrs.id)) {
+          if (isUndefined(attrs.id)) {
             attrs.id = function() { return attrs._id = uniqueId(); };
           }
           method = (tag in elementParse) ?
@@ -98,7 +96,7 @@ function parse(template) {
         text = modelText(name, escaped);
         if (last[0] === 'start') {
           attrs = last[2];
-          if (_.isUndefined(attrs.id)) {
+          if (isUndefined(attrs.id)) {
             attrs.id = function() { return attrs._id = uniqueId(); };
           }
           events.push(function(data) {
@@ -115,9 +113,9 @@ function parse(template) {
     }
   });
 
-  _.each(stack, function(item) {
+  stack.forEach(function(item) {
     function pushValue(value) {
-      if (_.isFunction(value)) {
+      if (isFunction(value)) {
         htmlIndex = html.push(value, '') - 1;
       } else {
         html[htmlIndex] += value;
@@ -126,7 +124,7 @@ function parse(template) {
     switch (item[0]) {
       case 'start':
         html[htmlIndex] += '<' + item[1];
-        _.each(item[2], function(value, key) {
+        forEach(item[2], function(key, value) {
           html[htmlIndex] += ' ' + key + '="';
           pushValue(value);
           html[htmlIndex] += '"';
@@ -142,18 +140,18 @@ function parse(template) {
   });
 
   return function(data) {
-    var rendered = _.reduce(html, function(memo, item) {
-      return memo + (_.isFunction(item) ? item(data) : item);
+    var rendered = html.reduce(function(memo, item) {
+      return memo + (isFunction(item) ? item(data) : item);
     }, '');
-    _.each(events, function(item) { item(data); });
+    events.forEach(function(item) { item(data); });
     return rendered;
   };
 }
 
 this.make = function(name, data, template, after) {
   var render = parse(template);
-  views[name] = _.isFunction(data) ?
-    ((after && !isServer) ?
+  views[name] = isFunction(data) ?
+    ((after && !onServer) ?
       function() {
         setTimeout(after, 0);
         return render(data.apply(null, arguments));
@@ -161,7 +159,7 @@ this.make = function(name, data, template, after) {
       function() {
         return render(data.apply(null, arguments));
       }) :
-    ((after && !isServer) ?
+    ((after && !onServer) ?
       function() {
         setTimeout(after, 0);
         return render(data);
@@ -177,9 +175,9 @@ this.server = function() {
   uniqueId._count = 0;
   return {
     body: get('body'),
-    script: 'vers.model.uniqueId._count=' + uniqueId._count + ';' +
-    'vers.dom.events._names=' + JSON.stringify(dom.events._names) + ';' +
-    'vers.model.events._names=' + JSON.stringify(model.events._names) + ';' +
-    'vers.model.init(' + JSON.stringify(model.get()) + ');'
+    script: 'chat.view.uniqueId._count=' + uniqueId._count + ';' +
+    'chat.dom.events._names=' + JSON.stringify(dom.events._names) + ';' +
+    'chat.model.events._names=' + JSON.stringify(model.events._names) + ';' +
+    'chat.model.init(' + JSON.stringify(model.get()) + ');'
   }
 };

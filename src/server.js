@@ -1,9 +1,9 @@
-var express = require('express');
-var fs = require('fs');
-var io = require('socket.io');
-var _ = require('underscore');
-var chat = require('./chat');
-var vers = require('../lib/vers');
+var express = require('express'),
+    fs = require('fs'),
+    io = require('socket.io'),
+    browserify = require('browserify'),
+    chat = require('./chat'),
+    vers = require('./vers');
 
 // var mongo = require('../lib/node-mongodb-native/lib/mongodb');
 // var mongoHost = process.env['MONGO_NODE_DRIVER_HOST'] != null ? process.env['MONGO_NODE_DRIVER_HOST'] : 'localhost';
@@ -31,10 +31,6 @@ var vers = require('../lib/vers');
 //   }
 // };
 
-var NODE_PATH = '/usr/local/lib/node';
-var underscore = fs.readFileSync('lib/underscore_1.1.4.js');
-var transporter = fs.readFileSync(NODE_PATH + '/.npm/transporter/active/package/lib/receiver.js');
-
 var userImages = [
   '/images/user_red.png',
   '/images/user_green.png',
@@ -50,13 +46,17 @@ var userImages = [
 var newUserId = 0;
 
 var app = express.createServer();
-app.use(express.staticProvider('public'));
-app.use(express.cookieDecoder());
+app.use(express.static('public'));
+app.use(express.cookieParser());
 app.use(express.session({ secret: 'steve_urkel' }));
+app.use(browserify({
+  base: __dirname,
+  mount: '/browserify.js'
+}));
 
 app.get('/', function(req, res) {
   var userId = req.session.userId;
-  req.session.userId = userId = _.isUndefined(userId) ? newUserId++ : userId;
+  req.session.userId = userId = (typeof userId === 'undefined') ? newUserId++ : userId;
   fs.readFile('src/chat.html', 'utf8', function(err, html) {
     fs.readFile('src/chat.js', 'utf8', function(err, js) {
       var out, body;
@@ -69,7 +69,7 @@ app.get('/', function(req, res) {
       chat.model.set('_session.userId', userId);
       out = chat.view.server();
       html = html.replace('{{body}}', out.body)
-        .replace('{{script}}', underscore + transporter); // + vers + js + out.script
+        .replace('{{script}}', out.script);
       res.send(html);
     });
   });

@@ -1,5 +1,5 @@
-var _ = require('underscore'),
-    EventDispatcher = require('./EventDispatcher').EventDispatcher,
+require('./utils')((function(){return this})());
+var EventDispatcher = require('./EventDispatcher'),
     world = {},
     setMethods = {
       attr: function(value, el, attr) {
@@ -15,19 +15,21 @@ var _ = require('underscore'),
         el.innerHTML = value;
       }
     },
-    isServer = typeof window === 'undefined',
-    socket;
+    socket, view;
 
 exports.setSocket = function(o) {
   socket = o;
 }
+exports.setView = function(o) {
+  view = o;
+}
 
-if (!isServer) {
+if (!onServer) {
   socket = new io.Socket(null, {port: 8001});
   socket.connect();
   socket.on('message', function(message) {
     message = JSON.parse(message);
-    model['_' + message[0]].apply(null, message[1]);
+    exports['_' + message[0]].apply(null, message[1]);
   });
 }
 
@@ -38,7 +40,7 @@ var events = exports.events = new EventDispatcher(
     path = pathName.split('.');
     for (i = 0; prop = path[i++];) {
       obj = obj[prop];
-      if (_.isUndefined(obj)) return false; // Remove bad event handler
+      if (isUndefined(obj)) return false; // Remove bad event handler
       if ((refName = obj._r) && (keyName = obj._k)) {
         key = get(keyName);
         ref = get(refName);
@@ -57,7 +59,7 @@ var events = exports.events = new EventDispatcher(
   function(listener, value) {
     var id, method, property, viewFunc, el, s,
         oldPathName, pathName, listenerObj;
-    if (_.isArray(listener)) {
+    if (isArray(listener)) {
       id = listener[0];
       method = listener[1];
       property = listener[2];
@@ -86,7 +88,7 @@ var get = exports.get = function(path) {
     path = path.split('.');
     for (i = 0; prop = path[i++];) {
       obj = obj[prop];
-      if (_.isUndefined(obj)) return null; // Return null if not found
+      if (isUndefined(obj)) return null; // Return null if not found
       if ((ref = obj._r) && (key = obj._k)) {
         ref = get(ref);
         key = get(key);
@@ -99,9 +101,9 @@ var get = exports.get = function(path) {
 
 var send = function(method, args, broadcast){
   var message = JSON.stringify(
-    [method, _.toArray(args)]
+    [method, toArray(args)]
   );
-  if (isServer) {
+  if (onServer) {
     if (broadcast && socket) {
       socket.broadcast(message);
     }

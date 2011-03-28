@@ -82,8 +82,10 @@ input{
 }
 </style>
 {{body}}
-<script src=socket.io/socket.io.js></script>
+<script src=/socket.io/socket.io.js></script>
+<script src=/browserify.js></script>
 <script>
-{{script}}
+var chat = require('./chat');
+window.onload = function(){ {{script}} };
 document.getElementById('commentInput').focus();
 </script>

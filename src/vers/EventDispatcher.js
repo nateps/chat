@@ -1,7 +1,12 @@
-var _ = require('underscore'),
-    isServer = typeof window === 'undefined';
+require('./utils')((function(){return this})());
 
-var EventDispatcher = this.EventDispatcher = function(bindCallback, triggerCallback) {
+var areSame = function(a, b) {
+  if (a === b) return true;
+  for (var key in a) if (!(key in b) || a[key] !== b[key]) return false;
+  return true;
+};
+
+var EventDispatcher = exports = module.exports = function(bindCallback, triggerCallback) {
   this._bindCallback = bindCallback;
   this._triggerCallback = triggerCallback;
   this._names = {};
@@ -11,8 +16,8 @@ EventDispatcher.prototype = {
     var names = this._names,
         listeners = names[name];
     var containsEqual = function(a, o) {
-      return _.some(a, function(i) {
-        return _.isEqual(i, o);
+      return a.some(function(i) {
+        return areSame(i, o);
       });
     }
     if (this._bindCallback(name, listener)) {
@@ -27,8 +32,8 @@ EventDispatcher.prototype = {
   },
   unbind: function(name, listener) {
     var names = this._names;
-    names[name] = _.filter(names[name], function(item) {
-      return !_.isEqual(item, listener);
+    names[name] = names[name].filter(function(item) {
+      return !areSame(item, listener);
     });
   },
   trigger: function(name, value) {
@@ -37,8 +42,8 @@ EventDispatcher.prototype = {
         callback = this._triggerCallback,
         dirty = false,
         successful;
-    if (listeners && !isServer) {
-      _.each(listeners, function(listener, i) {
+    if (listeners && !onServer) {
+      listeners.forEach(function(listener, i) {
         successful = callback(listener, value);
         if (!successful) {
           delete listeners[i];
@@ -46,7 +51,8 @@ EventDispatcher.prototype = {
         }
       });
       if (dirty) {
-        names[name] = _.compact(listeners);
+        // Remove all falsy values
+        names[name] = listeners.filter(function(value) { return !!value; });
       }
     }
   }

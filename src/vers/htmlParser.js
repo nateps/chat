@@ -3,9 +3,8 @@
 // Original code by Erik Arvidsson, Mozilla Public License
 // http://erik.eae.net/simplehtmlparser/simplehtmlparser.js
 
-var _ = require('underscore'),
     // Regular Expressions for parsing
-    startTag = /^<(\w+)((?:\s+\w+(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|[^>\s]+))?)*)\s*(\/?)>/,
+var startTag = /^<(\w+)((?:\s+\w+(?:\s*=\s*(?:(?:"[^"]*")|(?:'[^']*')|[^>\s]+))?)*)\s*(\/?)>/,
     endTag = /^<\/(\w+)[^>]*>/,
     attr = /(\w+)(?:\s*=\s*(?:(?:"((?:\\.|[^"])*)")|(?:'((?:\\.|[^'])*)')|([^>\s]+)))?/g,
     // HTML elements
@@ -20,13 +19,13 @@ var _ = require('underscore'),
     special = makeMap('script,style');
 
 function makeMap(list) {
-  return _.reduce(list.split(','), function(memo, item) {
+  return list.split(',').reduce(function(memo, item) {
     memo[item] = true;
     return memo;
   }, {});
 }
 
-var parse = this.parse = function(html, handler) {
+var parse = exports.parse = function(html, handler) {
   var charsHandler = handler && handler.chars,
       startHandler = handler && handler.start,
       endHandler = handler && handler.end,
