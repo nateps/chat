@@ -6,7 +6,7 @@ var areSame = function(a, b) {
   return true;
 };
 
-var EventDispatcher = exports = module.exports = function(bindCallback, triggerCallback) {
+var EventDispatcher = module.exports = function(bindCallback, triggerCallback) {
   this._bindCallback = bindCallback;
   this._triggerCallback = triggerCallback;
   this._names = {};

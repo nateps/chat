@@ -1,6 +1,6 @@
-exports = module.exports = function(root) {
+module.exports = function(root) {
     
-  // Borrowed from Underscore.js:
+  // Based on Underscore.js:
   
   var isArray = root.isArray = Array.isArray || function(obj) {
     return toString.call(obj) === '[object Array]';

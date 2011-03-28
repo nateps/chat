@@ -1,4 +1,4 @@
-var vers = require('./vers'),
+var vers = require('./lib/vers'),
     dom = exports.dom = vers.dom,
     model = exports.model = vers.model,
     view = exports.view = vers.view;

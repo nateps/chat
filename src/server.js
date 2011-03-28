@@ -2,8 +2,7 @@ var express = require('express'),
     fs = require('fs'),
     io = require('socket.io'),
     browserify = require('browserify'),
-    chat = require('./chat'),
-    vers = require('./vers');
+    chat = require('./chat');
 
 // var mongo = require('../lib/node-mongodb-native/lib/mongodb');
 // var mongoHost = process.env['MONGO_NODE_DRIVER_HOST'] != null ? process.env['MONGO_NODE_DRIVER_HOST'] : 'localhost';
