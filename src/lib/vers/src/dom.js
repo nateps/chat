@@ -18,9 +18,6 @@ exports.setModel = function(o) {
 }
 
 var events = exports.events = new EventDispatcher(
-  function(name, listener) {
-    return true;
-  },
   function(listener, targetId) {
     var func = listener[0],
         path = listener[1],

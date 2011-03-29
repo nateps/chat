@@ -34,28 +34,6 @@ if (!onServer) {
 }
 
 var events = exports.events = new EventDispatcher(
-  function(pathName, listener) {
-    var obj = world,
-        path, i, prop, refName, keyName, ref, key, eventPath;
-    path = pathName.split('.');
-    for (i = 0; prop = path[i++];) {
-      obj = obj[prop];
-      if (isUndefined(obj)) return false; // Remove bad event handler
-      if ((refName = obj._r) && (keyName = obj._k)) {
-        key = get(keyName);
-        ref = get(refName);
-        eventPath = [refName, key].concat(path.slice(i)).join('.');
-        // Register an event to update the other event handler when the
-        // reference key changes
-        events.bind(keyName, {_o: eventPath, _p: pathName, _l: listener});
-        // Bind the event to the dereferenced path
-        events.bind(eventPath, listener);
-        // Cancel the creation of an event to a path with a reference in it
-        return false;
-      }
-    }
-    return true;
-  },
   function(listener, value) {
     var id, method, property, viewFunc, el, s,
         oldPathName, pathName, listenerObj;
@@ -78,6 +56,27 @@ var events = exports.events = new EventDispatcher(
       // in the bind action above
     }
     return false;
+  }, function(pathName, listener) {
+    var obj = world,
+        path, i, prop, refName, keyName, ref, key, eventPath;
+    path = pathName.split('.');
+    for (i = 0; prop = path[i++];) {
+      obj = obj[prop];
+      if (isUndefined(obj)) return false; // Remove bad event handler
+      if ((refName = obj._r) && (keyName = obj._k)) {
+        key = get(keyName);
+        ref = get(refName);
+        eventPath = [refName, key].concat(path.slice(i)).join('.');
+        // Register an event to update the other event handler when the
+        // reference key changes
+        events.bind(keyName, {_o: eventPath, _p: pathName, _l: listener});
+        // Bind the event to the dereferenced path
+        events.bind(eventPath, listener);
+        // Cancel the creation of an event to a path with a reference in it
+        return false;
+      }
+    }
+    return true;
   }
 );
 
