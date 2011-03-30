@@ -73,11 +73,7 @@ function parse(template) {
           escaped = match[1] === '{{';
           name = match[2];
           if (isUndefined(attrs.id)) {
-            attrs.id = function(data, ids) {
-              var i = ids.i++,
-                  list = ids.list;
-              return attrs._id = list[i] = list[i] || uniqueId();
-            };
+            attrs.id = function(data) { return attrs._id = uniqueId(); };
           }
           method = (tag in elementParse) ?
             method = elementParse[tag](key, attrs, name) :
@@ -101,11 +97,7 @@ function parse(template) {
         if (last[0] === 'start') {
           attrs = last[2];
           if (isUndefined(attrs.id)) {
-            attrs.id = function(data, ids) {
-              var i = ids.i++,
-                  list = ids.list;
-              return attrs._id = list[i] = list[i] || uniqueId();
-            };
+            attrs.id = function(data) { return attrs._id = uniqueId(); };
           }
           events.push(function(data) {
             model.events.bind(data[name].model,
@@ -148,45 +140,34 @@ function parse(template) {
   });
 
   return function(data, obj) {
-    var ids = {list: [], i: 0},
-        bindEvents = true;
-    if (typeof obj === 'object') {
-      if (obj._v) {
-        ids.list = obj._v;
-        bindEvents = false;
-      } else {
-        obj._v = ids.list;
-      }
-    }
     var rendered = html.reduce(function(memo, item) {
-      return memo + (isFunction(item) ? item(data, ids) : item);
+      return memo + (isFunction(item) ? item(data) : item);
     }, '');
-    if (bindEvents) {
-      events.forEach(function(item) { item(data); });
-    }
+    events.forEach(function(item) { item(data); });
     return rendered;
   };
 }
 
 this.make = function(name, data, template, after) {
-  var render = parse(template);
-  views[name] = isFunction(data) ?
-    ((after && !onServer) ?
-      function() {
-        setTimeout(after, 0);
-        return render(data.apply(null, arguments), arguments[0]);
-      } :
-      function() {
-        return render(data.apply(null, arguments), arguments[0]);
-      }) :
-    ((after && !onServer) ?
-      function() {
-        setTimeout(after, 0);
-        return render(data);
-      } :
-      function() {
-        return render(data);
-      });
+  var render = parse(template),
+      func = isFunction(data) ?
+        function() {
+          var obj = arguments[0],
+              rendered;
+          if (typeof obj === 'object') {
+            obj._v = rendered = obj._v || {};
+            rendered[name] = 1;
+          }
+          return render(data.apply(null, arguments));
+        } :
+        function() {
+          return render(data);
+        };
+  views[name] = (after && !onServer) ?
+    function() {
+      setTimeout(after, 0);
+      return func.apply(null, arguments);
+    } : func;
 };
 
 this.server = function() {
