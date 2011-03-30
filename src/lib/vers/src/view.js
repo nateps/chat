@@ -152,11 +152,10 @@ this.make = function(name, data, template, after) {
   var render = parse(template),
       func = isFunction(data) ?
         function() {
-          var obj = arguments[0],
-              rendered;
+          var obj = arguments[0];
           if (typeof obj === 'object') {
-            obj._v = rendered = obj._v || {};
-            rendered[name] = 1;
+            obj._v = obj._v || {};
+            obj._v[name] = 1;
           }
           return render(data.apply(null, arguments));
         } :
