@@ -73,7 +73,11 @@ function parse(template) {
           escaped = match[1] === '{{';
           name = match[2];
           if (isUndefined(attrs.id)) {
-            attrs.id = function() { return attrs._id = uniqueId(); };
+            attrs.id = function(data, ids) {
+              var i = ids.i++,
+                  list = ids.list;
+              return attrs._id = list[i] = list[i] || uniqueId();
+            };
           }
           method = (tag in elementParse) ?
             method = elementParse[tag](key, attrs, name) :
@@ -97,7 +101,11 @@ function parse(template) {
         if (last[0] === 'start') {
           attrs = last[2];
           if (isUndefined(attrs.id)) {
-            attrs.id = function() { return attrs._id = uniqueId(); };
+            attrs.id = function(data, ids) {
+              var i = ids.i++,
+                  list = ids.list;
+              return attrs._id = list[i] = list[i] || uniqueId();
+            };
           }
           events.push(function(data) {
             model.events.bind(data[name].model,
@@ -139,11 +147,23 @@ function parse(template) {
     }
   });
 
-  return function(data) {
+  return function(data, obj) {
+    var ids = {list: [], i: 0},
+        bindEvents = true;
+    if (typeof obj === 'object') {
+      if (obj._v) {
+        ids.list = obj._v;
+        bindEvents = false;
+      } else {
+        obj._v = ids.list;
+      }
+    }
     var rendered = html.reduce(function(memo, item) {
-      return memo + (isFunction(item) ? item(data) : item);
+      return memo + (isFunction(item) ? item(data, ids) : item);
     }, '');
-    events.forEach(function(item) { item(data); });
+    if (bindEvents) {
+      events.forEach(function(item) { item(data); });
+    }
     return rendered;
   };
 }
@@ -154,10 +174,10 @@ this.make = function(name, data, template, after) {
     ((after && !onServer) ?
       function() {
         setTimeout(after, 0);
-        return render(data.apply(null, arguments));
+        return render(data.apply(null, arguments), arguments[0]);
       } :
       function() {
-        return render(data.apply(null, arguments));
+        return render(data.apply(null, arguments), arguments[0]);
       }) :
     ((after && !onServer) ?
       function() {
