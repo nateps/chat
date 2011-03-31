@@ -43,15 +43,15 @@ chat.model.init({
 
 var userImages = [
   '/images/user_red.png',
-  '/images/user_green.png',
   '/images/user_blue.png',
-  '/images/user_gray.png',
-  '/images/user_darkpurple.png',
-  '/images/user_grey.png',
-  '/images/user_lightblue.png',
-  '/images/user_orange.png',
-  '/images/user_pink.png',
+  '/images/user_green.png',
+  '/images/user_light_gray.png',
   '/images/user_yellow.png',
+  '/images/user_purple.png',
+  '/images/user_orange.png',
+  '/images/user_magenta.png',
+  '/images/user_cyan.png',
+  '/images/user_dark_gray.png',
 ];
 var newUserId = 0;
 
@@ -73,7 +73,7 @@ app.get('/', function(req, res) {
       if (chat.model.get('users.' + userId) === null) {
         chat.model.set('users.' + userId, {
           name: 'User ' + (userId + 1),
-          picUrl: userImages[userId % 10]
+          picUrl: userImages[userId % userImages.length]
         }, true);
       };
       chat.model.set('_session.userId', userId);
