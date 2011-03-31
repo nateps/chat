@@ -1,6 +1,7 @@
 require('./utils')((function(){return this})());
 var EventDispatcher = require('./EventDispatcher'),
     world = {},
+    emptyEl = (onServer) ? null : document.createElement('div'),
     setMethods = {
       attr: function(value, el, attr) {
         el.setAttribute(attr, value);
@@ -13,6 +14,10 @@ var EventDispatcher = require('./EventDispatcher'),
       },
       html: function(value, el) {
         el.innerHTML = value;
+      },
+      appendHtml: function(value, el) {
+        emptyEl.innerHTML = value;
+        el.appendChild(emptyEl.firstChild);
       }
     },
     socket, view;
@@ -34,9 +39,9 @@ if (!onServer) {
 }
 
 var events = exports.events = new EventDispatcher(
-  function(listener, value) {
+  function(listener, value, options) {
     var id, method, property, viewFunc, el, s,
-        oldPathName, pathName, listenerObj;
+        oldPathName, pathName, listenerObj, html;
     if (isArray(listener)) {
       id = listener[0];
       method = listener[1];
@@ -44,8 +49,17 @@ var events = exports.events = new EventDispatcher(
       viewFunc = listener[3];
       el = document.getElementById(id);
       if (!el) return false;
-      s = (viewFunc) ? view._get(viewFunc, value) : value;
-      setMethods[method](s, el, property);
+      if (options) {
+        switch (options) {
+          case 'push':
+            s = view._get(viewFunc, value[value.length - 1]);
+            setMethods.appendHtml(s, el);
+            break;
+        }
+      } else {
+        s = (viewFunc) ? view._get(viewFunc, value) : value;
+        setMethods[method](s, el, property);
+      }
       return true;
     } else if ((oldPathName = listener._o) && (pathName = listener._p) && (listenerObj = listener._l)) {
       events.unbind(oldPathName, listenerObj);
@@ -154,7 +168,7 @@ var setSilent = exports.setSilent = function(path, value) {
 var _push = exports._push = function(name, value, sendUpdate, broadcast) {
   var arr = world[name];
   arr.push(value);
-  events.trigger(name, arr);
+  events.trigger(name, arr, 'push');
   if (sendUpdate) send('push', [name, value], broadcast);
 };
 var push = exports.push = function(name, value, broadcast) {

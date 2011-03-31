@@ -15,11 +15,11 @@ model.init({
 });
 
 view.make('message',
-  function(item, index) {
+  function(item) {
     return {
       userPicUrl: { model: 'users.' + item.userId + '.picUrl' },
       userName: { model: 'users.' + item.userId + '.name' },
-      comment: { model: 'messages.' + index + '.comment' }
+      comment: item.comment
     };
   },
   '<li><img src="{{{userPicUrl}}}" class=pic>' +
@@ -49,11 +49,9 @@ view.make('body', {
 );
 
 exports.postMessage = function() {
-  var s = new Date();
   model.push('messages', {
     userId: model.get('_session.userId'),
     comment: model.get('_session.newComment')
   });
-  console.log("push message: " + ((new Date()) - s));
   model.set('_session.newComment', '');
 }

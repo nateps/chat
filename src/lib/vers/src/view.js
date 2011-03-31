@@ -10,16 +10,16 @@ exports.setDom = function(o) {
   dom = o;
 }
 
-var uniqueId = this.uniqueId = function() {
+var uniqueId = exports.uniqueId = function() {
   return '_' + (uniqueId._count++).toString(36);
 };
 uniqueId._count = 0;
 
-var get = this._get = function(func, obj) {
+var get = exports._get = function(func, obj) {
   func = views[func];
   return (func) ?
-    (Array.isArray(obj) ? obj.reduce(function(memo, item, index) {
-      return memo + func(item, index);
+    (isArray(obj) ? obj.reduce(function(memo, item) {
+      return memo + func(item);
     }, '') : func(obj)) :
     null;
 }
@@ -35,7 +35,7 @@ function parse(template) {
   function modelText(name, escaped) {
     return function(data) {
       var datum = data[name],
-          obj = model.get(datum.model);
+          obj = (datum.model) ? model.get(datum.model) : datum;
       return datum.view ? get(datum.view, obj) : obj;
     }
   }
@@ -73,13 +73,15 @@ function parse(template) {
           escaped = match[1] === '{{';
           name = match[2];
           if (isUndefined(attrs.id)) {
-            attrs.id = function(data) { return attrs._id = uniqueId(); };
+            attrs.id = function() { return attrs._id = uniqueId(); };
           }
           method = (tag in elementParse) ?
-            method = elementParse[tag](key, attrs, name) :
-            'attr';
+            elementParse[tag](key, attrs, name) : 'attr';
           events.push(function(data) {
-            model.events.bind(data[name].model, [attrs._id || attrs.id, method, key]);
+            var path = data[name].model;
+            if (path) {
+              model.events.bind(path, [attrs._id || attrs.id, method, key]);
+            }
           });
           attrs[key] = modelText(name, escaped);
         }
@@ -97,12 +99,15 @@ function parse(template) {
         if (last[0] === 'start') {
           attrs = last[2];
           if (isUndefined(attrs.id)) {
-            attrs.id = function(data) { return attrs._id = uniqueId(); };
-          }
+            attrs.id = function() { return attrs._id = uniqueId(); };
+          }          
           events.push(function(data) {
-            model.events.bind(data[name].model,
-              [attrs._id || attrs.id, 'html', null, data[name].view]
-            );
+            var path = data[name].model;
+            if (path) {
+              model.events.bind(path,
+                [attrs._id || attrs.id, 'html', null, data[name].view]
+              );
+            }
           });
         }
       }
@@ -148,20 +153,11 @@ function parse(template) {
   };
 }
 
-this.make = function(name, data, template, after) {
+exports.make = function(name, data, template, after) {
   var render = parse(template),
       func = isFunction(data) ?
-        function() {
-          var obj = arguments[0];
-          if (typeof obj === 'object') {
-            obj._v = obj._v || {};
-            obj._v[name] = 1;
-          }
-          return render(data.apply(null, arguments));
-        } :
-        function() {
-          return render(data);
-        };
+        function() { return render(data.apply(null, arguments)); } :
+        function() { return render(data); };
   views[name] = (after && !onServer) ?
     function() {
       setTimeout(after, 0);
@@ -169,7 +165,7 @@ this.make = function(name, data, template, after) {
     } : func;
 };
 
-this.server = function() {
+exports.server = function() {
   model.events._names = {};
   dom.events._names = {};
   uniqueId._count = 0;
