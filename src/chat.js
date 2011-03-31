@@ -6,6 +6,7 @@ view.preLoad(function() {
   function winResize() {
     $('messageContainer').style.height =
       (window.innerHeight - $('foot').offsetHeight) + 'px';
+    $('messageContainer').scrollTop = $('messageList').offsetHeight;
   }
   winResize();
   window.onresize = winResize;
