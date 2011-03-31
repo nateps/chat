@@ -32,11 +32,28 @@ function parse(template) {
       htmlIndex = 0,
       placeholder = /^(\{{2,3})(\w+)\}{2,3}$/,
       elementParse;
+  
+  // Borrowed from Mustache.js
+  function htmlEscape(s) {
+    s = String(s === null ? '' : s);
+    return s.replace(/&(?!\w+;)|["'<>\\]/g, function(s) {
+      switch(s) {
+        case '&': return '&amp;';
+        case '\\': return '\\\\';
+        case '"': return '&quot;';
+        case "'": return '&#39;';
+        case '<': return '&lt;';
+        case '>': return '&gt;';
+        default: return s;
+      }
+    });
+  }
 
   function modelText(name, escaped) {
     return function(data) {
       var datum = data[name],
-          obj = (datum.model) ? model.get(datum.model) : datum;
+          obj = datum.model ? model.get(datum.model) : datum;
+      if (isString(obj)) obj = htmlEscape(obj);
       return datum.view ? get(datum.view, obj) : obj;
     }
   }
@@ -177,6 +194,6 @@ exports.server = function() {
     initModel: 'chat.view.uniqueId._count=' + uniqueId._count + ';' +
       'chat.dom.events._names=' + JSON.stringify(dom.events._names) + ';' +
       'chat.model.events._names=' + JSON.stringify(model.events._names) + ';' +
-      'chat.model.init(' + JSON.stringify(model.get()) + ');'
+      'chat.model.init(' + JSON.stringify(model.get()).replace(/<\//g, '<\\/') + ');'
   }
 };
