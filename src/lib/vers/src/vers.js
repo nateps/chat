@@ -6,3 +6,21 @@ view.setModel(model);
 view.setDom(dom);
 dom.setModel(model);
 model.setView(view);
+
+module.exports = function(clientModule, clientExports) {
+  if (process.title === 'node') {
+    clientExports.dom = dom;
+    clientExports.model = model;
+    clientExports.view = view;
+    clientExports.setSocket = model.setSocket;
+  } else {
+    clientModule.exports = function(count, modelData, modelEvents, domEvents) {
+      view.uniqueId._count = count;
+      model.init(modelData);
+      model.events._names = modelEvents;
+      dom.events._names = domEvents;
+      return clientExports;
+    }
+  }
+  return exports;
+}

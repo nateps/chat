@@ -1,8 +1,6 @@
-var vers = require('./lib/vers'),
-    dom = exports.dom = vers.dom,
-    model = exports.model = vers.model,
-    view = exports.view = vers.view;
-exports.setSocket = vers.setSocket;
+var vers = require('./lib/vers')(module, exports),
+    model = vers.model,
+    view = vers.view;
 
 view.make('message',
   function(item) {

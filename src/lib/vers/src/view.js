@@ -191,9 +191,9 @@ exports.server = function() {
   return {
     body: get('body'),
     loadFuncs: loadFuncs,
-    initModel: 'chat.view.uniqueId._count=' + uniqueId._count + ';' +
-      'chat.dom.events._names=' + JSON.stringify(dom.events._names) + ';' +
-      'chat.model.events._names=' + JSON.stringify(model.events._names) + ';' +
-      'chat.model.init(' + JSON.stringify(model.get()).replace(/<\//g, '<\\/') + ');'
+    initModel: uniqueId._count + ',' +
+      JSON.stringify(model.get()).replace(/<\//g, '<\\/') + ',' +
+      JSON.stringify(model.events._names) + ',' +
+      JSON.stringify(dom.events._names)
   }
 };

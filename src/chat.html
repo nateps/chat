@@ -99,6 +99,5 @@ $('commentInput').focus();
 <script src=/socket.io/socket.io.js></script>
 <script src=/browserify.js></script>
 <script>
-var chat = require('./chat');
-{{initModel}}
+var chat = require('./chat')({{initModel}});
 </script>
