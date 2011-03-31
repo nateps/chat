@@ -4,16 +4,6 @@ var vers = require('./lib/vers'),
     view = exports.view = vers.view;
 exports.setSocket = vers.setSocket;
 
-model.init({
-  users: {},
-  messages: [],
-  _session: {
-    userId: 0,
-    user: model.ref('users', '_session.userId'),
-    newComment: ''
-  }
-});
-
 view.make('message',
   function(item) {
     return {
@@ -27,7 +17,9 @@ view.make('message',
       '<p><b>{{userName}}</b>' +
       '<p>{{comment}}' +
     '</div>',
-  function() { window.scrollBy(0,9999); }
+  function() {
+    $('messageContainer').scrollTop = $('messageList').offsetHeight;
+  }
 );
 
 view.make('body', {
@@ -36,7 +28,7 @@ view.make('body', {
     userName: { model: '_session.user.name' },
     newComment: { model: '_session.newComment' }
   },
-  '<ul id=messageList>{{{messages}}}</ul>' +
+  '<div id=messageContainer><ul id=messageList>{{{messages}}}</ul></div>' +
     '<div id=foot>' +
       '<img id=inputPic src="{{{userPicUrl}}}" class=pic>' +
       '<div id=inputs>' +
@@ -54,4 +46,4 @@ exports.postMessage = function() {
     comment: model.get('_session.newComment')
   });
   model.set('_session.newComment', '');
-}
+};

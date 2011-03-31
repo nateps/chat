@@ -1,6 +1,7 @@
 require('./utils')((function(){return this})());
 var htmlParser = require('./htmlParser'),
     views = {},
+    loadFuncs = '',
     model, dom;
 
 exports.setModel = function(o) {
@@ -158,6 +159,7 @@ exports.make = function(name, data, template, after) {
       func = isFunction(data) ?
         function() { return render(data.apply(null, arguments)); } :
         function() { return render(data); };
+  if (after) loadFuncs += '(' + after.toString() + ')();';
   views[name] = (after && !onServer) ?
     function() {
       setTimeout(after, 0);
@@ -171,9 +173,10 @@ exports.server = function() {
   uniqueId._count = 0;
   return {
     body: get('body'),
-    script: 'chat.view.uniqueId._count=' + uniqueId._count + ';' +
-    'chat.dom.events._names=' + JSON.stringify(dom.events._names) + ';' +
-    'chat.model.events._names=' + JSON.stringify(model.events._names) + ';' +
-    'chat.model.init(' + JSON.stringify(model.get()) + ');'
+    loadFuncs: loadFuncs,
+    initModel: 'chat.view.uniqueId._count=' + uniqueId._count + ';' +
+      'chat.dom.events._names=' + JSON.stringify(dom.events._names) + ';' +
+      'chat.model.events._names=' + JSON.stringify(model.events._names) + ';' +
+      'chat.model.init(' + JSON.stringify(model.get()) + ');'
   }
 };

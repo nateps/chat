@@ -4,9 +4,10 @@
 body{
   background:#bbb;
   color:#000;
-  font:.8125em/1.231em arial,sans-serif;
+  font:13px/16px arial,sans-serif;
+  overflow:hidden;
 }
-body,fieldset,form,h1,h2,h3,h4,input,li,ol,p,td,textarea,th{
+body,fieldset,form,h1,h2,h3,h4,input,ul,li,ol,p,td,textarea,th{
   margin:0;
   padding:0
 }
@@ -39,16 +40,17 @@ img[src="data:,"]{
 }
 
 li{
-  padding-top:8px;
+  margin:8px 0;
   clear:both;
 }
 input{
   padding:1px;
 }
+#messageContainer{
+  overflow-y:scroll;
+}
 #messageList{
   list-style:none;
-  padding:0 0 75px;
-  margin:0;
 }
 .message,#inputs{
   margin:0 8px 0 66px
@@ -56,7 +58,8 @@ input{
 .message{
   background:#fff;
   border-radius:10px;
-  padding:9px 12px;
+  min-height:34px;
+  padding:8px 12px;
 }
 .pic{
   width:50px;
@@ -68,7 +71,7 @@ input{
   background:#ddd;
   width:100%;
   border-top:1px solid #eee;
-  position:fixed;
+  position:absolute;
   bottom:0;
   padding:8px 0;
 }
@@ -82,12 +85,20 @@ input{
 }
 </style>
 {{body}}
+<script>
+function $(s) { return document.getElementById(s) }
+function winResize() {
+  $('messageContainer').style.height =
+    (window.innerHeight - $('foot').offsetHeight) + 'px';
+}
+winResize();
+window.onresize = winResize;
+$('commentInput').focus();
+{{loadFuncs}}
+</script>
 <script src=/socket.io/socket.io.js></script>
 <script src=/browserify.js></script>
 <script>
 var chat = require('./chat');
-window.onload = function(){
-  document.getElementById('commentInput').focus();
-  {{script}}
-};
+{{initModel}}
 </script>
