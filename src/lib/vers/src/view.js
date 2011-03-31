@@ -2,13 +2,16 @@ require('./utils')((function(){return this})());
 var htmlParser = require('./htmlParser'),
     views = {},
     loadFuncs = '',
-    model, dom;
+    clientName, model, dom;
 
 exports.setModel = function(o) {
   model = o;
 }
 exports.setDom = function(o) {
   dom = o;
+}
+exports.setClientName = function(s) {
+  clientName = s;
 }
 
 var uniqueId = exports.uniqueId = function() {
@@ -171,29 +174,42 @@ function parse(template) {
   };
 }
 
+var preLoad = exports.preLoad = function(func) {
+  loadFuncs += '(' + func.toString() + ')();';
+}
+
 exports.make = function(name, data, template, after) {
   var render = parse(template),
       func = isFunction(data) ?
         function() { return render(data.apply(null, arguments)); } :
         function() { return render(data); };
-  if (after) loadFuncs += '(' + after.toString() + ')();';
-  views[name] = (after && !onServer) ?
-    function() {
-      setTimeout(after, 0);
-      return func.apply(null, arguments);
-    } : func;
-};
-
-exports.server = function() {
-  model.events._names = {};
-  dom.events._names = {};
-  uniqueId._count = 0;
-  return {
-    body: get('body'),
-    loadFuncs: loadFuncs,
-    initModel: uniqueId._count + ',' +
-      JSON.stringify(model.get()).replace(/<\//g, '<\\/') + ',' +
-      JSON.stringify(model.events._names) + ',' +
-      JSON.stringify(dom.events._names)
+  if (onServer) {
+    if (after) preLoad(after);
+    views[name] = func;
+  } else {
+    views[name] = (after) ?
+      function() {
+        setTimeout(after, 0);
+        return func.apply(null, arguments);
+      } : func;
   }
 };
+
+if (onServer) {
+  exports.server = function() {
+    var jsmin = require('jsmin').jsmin;
+    model.events._names = {};
+    dom.events._names = {};
+    uniqueId._count = 0;
+    return get('body') +
+      '<script>function $(s){return document.getElementById(s)}' + 
+      jsmin(loadFuncs) + '</script>' +
+      '<script src=/socket.io/socket.io.js></script>' +
+      '<script src=/browserify.js></script>' +
+      '<script>var ' + clientName + '=require("./' + clientName + '")(' +
+      uniqueId._count + ',' +
+      JSON.stringify(model.get()).replace(/<\//g, '<\\/') + ',' +
+      JSON.stringify(model.events._names) + ',' +
+      JSON.stringify(dom.events._names) + ');</script>';
+  };
+}

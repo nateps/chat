@@ -4,7 +4,7 @@
 body{
   background:#bbb;
   color:#000;
-  font:13px/16px arial,sans-serif;
+  font:13px/1.231 arial,sans-serif;
   overflow:hidden;
 }
 body,fieldset,form,h1,h2,h3,h4,input,ul,li,ol,p,td,textarea,th{
@@ -44,6 +44,7 @@ li{
   clear:both;
 }
 input{
+  margin:0;
   padding:1px;
 }
 #messageContainer{
@@ -53,17 +54,17 @@ input{
   list-style:none;
 }
 .message,#inputs{
-  margin:0 8px 0 66px
+  margin:0 8px 0 64px
 }
 .message{
   background:#fff;
   border-radius:10px;
-  min-height:34px;
+  min-height:32px;
   padding:8px 12px;
 }
 .pic{
-  width:50px;
-  height:50px;
+  width:48px;
+  height:48px;
   float:left;
   margin:0 8px;
 }
@@ -76,8 +77,8 @@ input{
   padding:8px 0;
 }
 #inputForm{
-  margin-top:6px;
-  padding-right:6px;
+  margin-top:4px;
+  padding-right:8px;
   position:relative;
 }
 #commentInput{
@@ -85,19 +86,3 @@ input{
 }
 </style>
 {{body}}
-<script>
-function $(s) { return document.getElementById(s) }
-function winResize() {
-  $('messageContainer').style.height =
-    (window.innerHeight - $('foot').offsetHeight) + 'px';
-}
-winResize();
-window.onresize = winResize;
-$('commentInput').focus();
-{{loadFuncs}}
-</script>
-<script src=/socket.io/socket.io.js></script>
-<script src=/browserify.js></script>
-<script>
-var chat = require('./chat')({{initModel}});
-</script>

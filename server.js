@@ -2,6 +2,7 @@ var express = require('express'),
     fs = require('fs'),
     io = require('socket.io'),
     browserify = require('browserify'),
+    jsmin = require('jsmin').jsmin,
     chat = require('./src/chat');
 
 // var mongo = require('../lib/node-mongodb-native/lib/mongodb');
@@ -60,7 +61,8 @@ app.use(express.cookieParser());
 app.use(express.session({ secret: 'steve_urkel' }));
 app.use(browserify({
   base: __dirname + '/src',
-  mount: '/browserify.js'
+  mount: '/browserify.js',
+  filter: jsmin
 }));
 
 app.get('/', function(req, res) {
@@ -68,7 +70,6 @@ app.get('/', function(req, res) {
   req.session.userId = userId = (typeof userId === 'undefined') ? newUserId++ : userId;
   fs.readFile('src/chat.html', 'utf8', function(err, html) {
     fs.readFile('src/chat.js', 'utf8', function(err, js) {
-      var out, body;
       if (chat.model.get('users.' + userId) === null) {
         chat.model.set('users.' + userId, {
           name: 'User ' + (userId + 1),
@@ -76,10 +77,7 @@ app.get('/', function(req, res) {
         }, true);
       };
       chat.model.set('_session.userId', userId);
-      out = chat.view.server();
-      html = html.replace('{{body}}', out.body)
-        .replace('{{loadFuncs}}', out.loadFuncs)
-        .replace('{{initModel}}', out.initModel);
+      html = html.replace('{{body}}', chat.view.server());
       res.send(html);
     });
   });

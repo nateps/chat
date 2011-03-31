@@ -2,6 +2,16 @@ var vers = require('./lib/vers')(module, exports),
     model = vers.model,
     view = vers.view;
 
+view.preLoad(function() {
+  function winResize() {
+    $('messageContainer').style.height =
+      (window.innerHeight - $('foot').offsetHeight) + 'px';
+  }
+  winResize();
+  window.onresize = winResize;
+  $('commentInput').focus();
+});
+
 view.make('message',
   function(item) {
     return {
