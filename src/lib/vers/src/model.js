@@ -25,24 +25,14 @@ var _ = require('./utils'),
         }
       }
     },
-    io, socket, view;
+    socket, view;
 
 exports._link = function(v) {
   view = v;
 }
 
-exports.setSocket = function(o) {
+exports._setSocket = function(o) {
   socket = o;
-}
-
-if (!_.onServer) {
-  io = require('./socket.io');
-  socket = new io.Socket(null, {port: 8001});
-  socket.connect();
-  socket.on('message', function(message) {
-    message = JSON.parse(message);
-    exports['_' + message[0]].apply(null, message[1]);
-  });
 }
 
 var events = exports.events = new EventDispatcher(

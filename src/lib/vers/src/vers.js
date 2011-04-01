@@ -12,7 +12,6 @@ module.exports = function(clientModule, clientExports) {
     clientExports.dom = dom;
     clientExports.model = model;
     clientExports.view = view;
-    clientExports.setSocket = model.setSocket;
     view._setClientName(/\/([^\/]+)\.js$/.exec(clientModule.filename)[1]);
 
     clientModule.exports = function(app) {
@@ -33,7 +32,7 @@ module.exports = function(clientModule, clientExports) {
           }
         });
       });
-      model.setSocket(socket);
+      model._setSocket(socket);
 
       app.use(browserify({
         base: clientModule.paths[0].replace('/node_modules', ''),
@@ -45,6 +44,15 @@ module.exports = function(clientModule, clientExports) {
     };
   } else {
     clientModule.exports = function(count, modelData, modelEvents, domEvents) {
+      var io = require('./socket.io'),
+          socket = new io.Socket();
+      socket.connect();
+      socket.on('message', function(message) {
+        message = JSON.parse(message);
+        model['_' + message[0]].apply(null, message[1]);
+      });
+      model._setSocket(socket);
+      
       view.uniqueId._count = count;
       model.init(modelData);
       model.events._names = modelEvents;
