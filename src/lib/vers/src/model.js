@@ -1,6 +1,7 @@
 require('./utils')((function(){return this})());
 var EventDispatcher = require('./EventDispatcher'),
     world = {},
+    funcs = {},
     emptyEl = (onServer) ? null : document.createElement('div'),
     setMethods = {
       attr: function(value, el, attr) {
@@ -44,7 +45,7 @@ if (!onServer) {
 var events = exports.events = new EventDispatcher(
   function(listener, value, options) {
     var id, method, property, viewFunc, el, s,
-        oldPathName, pathName, listenerObj, html;
+        oldPathName, pathName, listenerObj, modelFunc;
     if (isArray(listener)) {
       id = listener[0];
       method = listener[1];
@@ -57,7 +58,11 @@ var events = exports.events = new EventDispatcher(
       } else {
         el = document.getElementById(id);
       }
+      // The element can't be found, so remove this handler
       if (!el) return false;
+      // If this is the result of a model function assignment, keep the handler
+      // but don't perform any updates
+      if (value._f) return true;
       if (options) {
         switch (options) {
           case 'push':
@@ -77,11 +82,16 @@ var events = exports.events = new EventDispatcher(
       set(pathName, get(pathName));
       // Remove this handler, since it will be replaced with a new handler
       // in the bind action above
+      return false;
+    } else if ((modelFunc = listener._f) && (pathName = listener._p)) {
+      events.trigger(pathName, get(pathName));
+      return true;
     }
+    // Remove this event if it can't be handled
     return false;
   }, function(pathName, listener) {
     var obj = world,
-        path, i, prop, refName, keyName, ref, key, eventPath;
+        path, i, prop, refName, keyName, ref, key, eventPath, modelFunc, inputs;
     path = pathName.split('.');
     for (i = 0; prop = path[i++];) {
       obj = obj[prop];
@@ -95,8 +105,13 @@ var events = exports.events = new EventDispatcher(
         events.bind(keyName, {_o: eventPath, _p: pathName, _l: listener});
         // Bind the event to the dereferenced path
         events.bind(eventPath, listener);
-        // Cancel the creation of an event to a path with a reference in it
+        // Cancel the creation of the event to the reference itself
         return false;
+      } else if ((modelFunc = obj._f) && (inputs = obj._i)) {
+        // Bind a listener to each of the inputs to the function
+        inputs.forEach(function(item) {
+          events.bind(item, {_f: modelFunc, _p: pathName});
+        });
       }
     }
     return true;
@@ -105,7 +120,7 @@ var events = exports.events = new EventDispatcher(
 
 var get = exports.get = function(path) {
   var obj = world,
-      i, prop, ref, key;
+      i, prop, ref, key, func;
   if (path) {
     path = path.split('.');
     for (i = 0; prop = path[i++];) {
@@ -115,6 +130,9 @@ var get = exports.get = function(path) {
         ref = get(ref);
         key = get(key);
         obj = ref[key];
+      } else if (func = obj._f) {
+        func = funcs[func];
+        if (func) obj = func();
       }
     }
   }
@@ -184,9 +202,13 @@ var push = exports.push = function(name, value, broadcast) {
   _push(name, value, true, broadcast);
 };
 
+exports.func = function(name, inputs, func) {
+  funcs[name] = func;
+  return {_f: name, _i: inputs};
+};
 exports.ref = function(ref, key) {
   return {_r: ref, _k: key};
 };
-exports.init = function(value) {
-  world = value;
+exports.init = function(w) {
+  world = w;
 };

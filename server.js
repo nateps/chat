@@ -16,16 +16,6 @@ var fs = require('fs'),
     ],
     newUserId = 0;
 
-chat.model.init({
-  users: {},
-  messages: [],
-  _session: {
-    userId: 0,
-    user: chat.model.ref('users', '_session.userId'),
-    newComment: ''
-  }
-});
-
 app.use(express.static('public'));
 app.use(express.cookieParser());
 app.use(express.session({ secret: 'steve_urkel' }));
