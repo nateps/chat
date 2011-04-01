@@ -1,17 +1,32 @@
 var vers = require('./lib/vers')(module, exports),
     model = vers.model,
-    view = vers.view;
+    view = vers.view,
+    stylus, fs, styles;
 
-view.preLoad(function() {
-  function winResize() {
-    $('messageContainer').style.height =
-      (window.innerHeight - $('foot').offsetHeight) + 'px';
-    $('messageContainer').scrollTop = $('messageList').offsetHeight;
-  }
-  winResize();
-  window.onresize = winResize;
-  $('commentInput').focus();
-});
+if (process.title === 'node') {
+  stylus = require('stylus');
+  fs = require('fs');
+  styles = fs.readFileSync(__dirname + '/chat.styl', 'utf8');
+  
+  stylus.render(styles, {compress: true}, function(err, css){
+    view.head('<meta name=viewport content=width=device-width>' + 
+      '<style>' + css + '</style>'
+    );
+  });
+
+  view.preLoad(function() {
+    function winResize() {
+      $('messageContainer').style.height =
+        (window.innerHeight - $('foot').offsetHeight) + 'px';
+      $('messageContainer').scrollTop = $('messageList').offsetHeight;
+    }
+    winResize();
+    window.onresize = winResize;
+    $('commentInput').focus();
+  });
+}
+
+view.make('title', 'Chat demo');
 
 view.make('message',
   function(item) {

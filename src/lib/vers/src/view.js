@@ -2,37 +2,44 @@ require('./utils')((function(){return this})());
 var htmlParser = require('./htmlParser'),
     views = {},
     loadFuncs = '',
+    head = '',
+    foot = '',
     clientName, model, dom;
 
 exports.setModel = function(o) {
   model = o;
-}
+};
 exports.setDom = function(o) {
   dom = o;
-}
+};
 exports.setClientName = function(s) {
   clientName = s;
-}
+};
+exports.head = function(s) {
+  head = s;
+};
+exports.foot = function(s) {
+  foot = s;
+};
 
 var uniqueId = exports.uniqueId = function() {
   return '_' + (uniqueId._count++).toString(36);
 };
 uniqueId._count = 0;
 
-var get = exports._get = function(func, obj) {
-  func = views[func];
-  return (func) ?
+var get = exports._get = function(view, obj) {
+  view = views[view];
+  return (view) ?
     (isArray(obj) ? obj.reduce(function(memo, item) {
-      return memo + func(item);
-    }, '') : func(obj)) :
-    null;
-}
+      return memo + view(item);
+    }, '') : view(obj)) : '';
+};
 
 // Borrowed from Mustache.js
 var htmlEscape = exports.htmlEscape = function(s) {
   s = String(s === null ? '' : s);
   return s.replace(/&(?!\w+;)|["'<>\\]/g, function(s) {
-    switch(s) {
+    switch (s) {
       case '&': return '&amp;';
       case '\\': return '\\\\';
       case '"': return '&quot;';
@@ -42,7 +49,7 @@ var htmlEscape = exports.htmlEscape = function(s) {
       default: return s;
     }
   });
-}
+};
 
 function parse(template) {
   var stack = [],
@@ -174,14 +181,28 @@ function parse(template) {
     events.forEach(function(item) { item(data); });
     return rendered;
   };
-}
+};
 
 var preLoad = exports.preLoad = function(func) {
   loadFuncs += '(' + func.toString() + ')();';
-}
+};
+
+function simpleView(name) {
+  return function(datum) {
+    var path = datum.model,
+        obj = path ? model.get(path) : datum,
+        text = datum.view ? get(datum.view, obj) : obj;
+    if (path) {
+      if (name === 'title') {
+        model.events.bind(path, ['__document', 'prop', 'title']);
+      }
+    }
+    return text;
+  };
+};
 
 exports.make = function(name, data, template, after) {
-  var render = parse(template),
+  var render = (template) ? parse(template) : simpleView(name),
       func = isFunction(data) ?
         function() { return render(data.apply(null, arguments)); } :
         function() { return render(data); };
@@ -203,7 +224,8 @@ if (onServer) {
     model.events._names = {};
     dom.events._names = {};
     uniqueId._count = 0;
-    return get('body') +
+    return '<!DOCTYPE html>' +
+      '<title>' + get('title') + '</title>' + head + get('body') +
       '<script>function $(s){return document.getElementById(s)}' + 
       jsmin(loadFuncs) + '</script>' +
       '<script src=/socket.io/socket.io.js></script>' +
@@ -212,6 +234,6 @@ if (onServer) {
       uniqueId._count + ',' +
       JSON.stringify(model.get()).replace(/<\//g, '<\\/') + ',' +
       JSON.stringify(model.events._names) + ',' +
-      JSON.stringify(dom.events._names) + ');</script>';
+      JSON.stringify(dom.events._names) + ');</script>' + foot;
   };
 }

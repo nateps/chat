@@ -41,9 +41,7 @@ app.get('/', function(req, res) {
     }, true);
   };
   chat.model.set('_session.userId', userId);
-  fs.readFile('src/chat.html', 'utf8', function(err, html) {
-    res.send(html + chat.view.html());
-  });
+  res.send(chat.view.html());
 });
 
 app.listen(8001);

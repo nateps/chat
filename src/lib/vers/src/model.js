@@ -50,7 +50,13 @@ var events = exports.events = new EventDispatcher(
       method = listener[1];
       property = listener[2];
       viewFunc = listener[3];
-      el = document.getElementById(id);
+      if (id === '__document') {
+        el = document;
+      } else if (id === '__window') {
+        el = window;
+      } else {
+        el = document.getElementById(id);
+      }
       if (!el) return false;
       if (options) {
         switch (options) {
