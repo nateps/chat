@@ -52,12 +52,14 @@ function parse(template) {
     });
   }
 
-  function modelText(name, escaped) {
+  function modelText(name, escaped, quote) {
     return function(data) {
       var datum = data[name],
-          obj = datum.model ? model.get(datum.model) : datum;
-      if (isString(obj)) obj = htmlEscape(obj);
-      return datum.view ? get(datum.view, obj) : obj;
+          obj = datum.model ? model.get(datum.model) : datum,
+          text = datum.view ? get(datum.view, obj) : obj;
+      if (escaped) text = htmlEscape(text);
+      if (quote && text.indexOf(' ') !== -1) text = '"' + text + '"';
+      return text;
     }
   }
   
@@ -104,7 +106,7 @@ function parse(template) {
               model.events.bind(path, [attrs._id || attrs.id, method, key]);
             }
           });
-          attrs[key] = modelText(name, escaped);
+          attrs[key] = modelText(name, escaped, true);
         }
       });
       stack.push(['start', tag, attrs]);
@@ -141,13 +143,11 @@ function parse(template) {
 
   stack.forEach(function(item) {
     function pushValue(value, quote) {
-      quote = (quote) ? '"' : '';
       if (isFunction(value)) {
-        html[htmlIndex] += quote;
-        htmlIndex = html.push(value, quote) - 1;
+        htmlIndex = html.push(value, '') - 1;
       } else {
-        html[htmlIndex] += (value.indexOf(' ') !== -1) ?
-          quote + value + quote : value;
+        html[htmlIndex] += (quote && value.indexOf(' ') !== -1) ?
+          '"' + value + '"' : value;
       }
     }
     switch (item[0]) {

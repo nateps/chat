@@ -18,9 +18,10 @@ function makeMap(list) {
 }
 
 var parse = exports.parse = function(html, handler) {
-  var charsHandler = (handler && handler.chars) || function() {},
-      startHandler = (handler && handler.start) || function() {},
-      endHandler = (handler && handler.end) || function() {},
+  var empty = function() {},
+      charsHandler = (handler && handler.chars) || empty,
+      startHandler = (handler && handler.start) || empty,
+      endHandler = (handler && handler.end) || empty,
       last, index, chars, match;
   
   function parseStartTag(tag, tagName, rest) {
