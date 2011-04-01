@@ -47,7 +47,7 @@ module.exports = function(root) {
   
   // Custom utils:
   
-  root.onServer = typeof window === 'undefined';
+  root.onServer = process.title === 'node';
   
   var forEach = root.forEach = function(obj, iterator) {
     for (var key in obj) {

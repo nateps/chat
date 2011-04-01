@@ -198,7 +198,7 @@ exports.make = function(name, data, template, after) {
 };
 
 if (onServer) {
-  exports.server = function() {
+  exports.html = function() {
     var jsmin = require('jsmin').jsmin;
     model.events._names = {};
     dom.events._names = {};
