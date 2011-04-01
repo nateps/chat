@@ -13,7 +13,7 @@ module.exports = function(clientModule, clientExports) {
     clientExports.model = model;
     clientExports.view = view;
     clientExports.setSocket = model.setSocket;
-    view.setClientName(/\/([^\/]+)\.js$/.exec(clientModule.filename)[1]);
+    view.setClientName(/\/([^\/]+)\/node_modules$/.exec(clientModule.parent.paths[0])[1]);
   } else {
     clientModule.exports = function(count, modelData, modelEvents, domEvents) {
       view.uniqueId._count = count;
