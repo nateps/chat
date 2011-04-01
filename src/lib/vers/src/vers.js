@@ -19,9 +19,7 @@ module.exports = function(clientModule, clientExports) {
       var io = require('socket.io'),
           browserify = require('browserify'),
           jsmin = require('jsmin').jsmin,
-          socket = io.listen(app, {transports:
-            ['websocket', 'htmlfile', 'xhr-multipart', 'xhr-polling', 'jsonp-polling']
-          });
+          socket = io.listen(app, {transports: ['websocket', 'xhr-polling'] });
       socket.on('connection', function(client) {      
         client.on('message', function(message) {
           var data = JSON.parse(message),

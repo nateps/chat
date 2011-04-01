@@ -218,7 +218,6 @@ if (_.onServer) {
       '<title>' + get('Title') + '</title>' + get('Head') + get('Body') +
       '<script>function $(s){return document.getElementById(s)}' + 
       jsmin(loadFuncs) + '</script>' +
-      '<script src=/socket.io/socket.io.js></script>' +
       '<script src=/browserify.js></script>' +
       '<script>var ' + clientName + '=require("./' + clientName + '")(' +
       uniqueId._count + ',' +

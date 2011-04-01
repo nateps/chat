@@ -25,7 +25,7 @@ var _ = require('./utils'),
         }
       }
     },
-    socket, view;
+    io, socket, view;
 
 exports._link = function(v) {
   view = v;
@@ -36,6 +36,7 @@ exports.setSocket = function(o) {
 }
 
 if (!_.onServer) {
+  io = require('./socket.io');
   socket = new io.Socket(null, {port: 8001});
   socket.connect();
   socket.on('message', function(message) {
