@@ -67,7 +67,7 @@ function parse(template) {
       if (attr === 'value') {
         method = 'propLazy';
         setMethod = 'set';
-        if (attrs.silent) {
+        if ('silent' in attrs) {
           method = 'prop';
           setMethod = 'setSilent';
           // This need not be in the HTML output
@@ -140,20 +140,22 @@ function parse(template) {
   });
 
   stack.forEach(function(item) {
-    function pushValue(value) {
+    function pushValue(value, quote) {
+      quote = (quote) ? '"' : '';
       if (isFunction(value)) {
-        htmlIndex = html.push(value, '') - 1;
+        html[htmlIndex] += quote;
+        htmlIndex = html.push(value, quote) - 1;
       } else {
-        html[htmlIndex] += value;
+        html[htmlIndex] += (value.indexOf(' ') !== -1) ?
+          quote + value + quote : value;
       }
     }
     switch (item[0]) {
       case 'start':
         html[htmlIndex] += '<' + item[1];
         forEach(item[2], function(key, value) {
-          html[htmlIndex] += ' ' + key + '="';
-          pushValue(value);
-          html[htmlIndex] += '"';
+          html[htmlIndex] += ' ' + key + '=';
+          pushValue(value, true);
         });
         html[htmlIndex] += '>';
         return;

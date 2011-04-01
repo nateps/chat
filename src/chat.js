@@ -21,7 +21,7 @@ view.make('message',
       comment: item.comment
     };
   },
-  '<li><img src="{{{userPicUrl}}}" class=pic>' +
+  '<li><img src={{{userPicUrl}}} class=pic>' +
     '<div class=message>' +
       '<p><b>{{userName}}</b>' +
       '<p>{{comment}}' +
@@ -39,11 +39,11 @@ view.make('body', {
   },
   '<div id=messageContainer><ul id=messageList>{{{messages}}}</ul></div>' +
     '<div id=foot>' +
-      '<img id=inputPic src="{{{userPicUrl}}}" class=pic>' +
+      '<img id=inputPic src={{{userPicUrl}}} class=pic>' +
       '<div id=inputs>' +
-        '<input id=inputName value="{{userName}}">' +
+        '<input id=inputName value={{userName}}>' +
         '<form id=inputForm action=javascript:chat.postMessage()>' +
-          '<input id=commentInput value="{{newComment}}" silent>' +
+          '<input id=commentInput value={{newComment}} silent>' +
         '</form>' +
       '</div>' +
     '</div>'
