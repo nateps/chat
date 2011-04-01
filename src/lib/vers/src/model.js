@@ -12,12 +12,15 @@ var EventDispatcher = require('./EventDispatcher'),
       propLazy: function(value, el, prop) {
         if (el !== document.activeElement) el[prop] = value;
       },
-      html: function(value, el) {
-        el.innerHTML = value;
+      html: function(value, el, escape) {
+        if (escape) el.innerHTML = view.htmlEscape(value);
       },
       appendHtml: function(value, el) {
+        var child;
         emptyEl.innerHTML = value;
-        el.appendChild(emptyEl.firstChild);
+        while (child = emptyEl.firstChild) {
+          el.appendChild(child);
+        }
       }
     },
     socket, view;

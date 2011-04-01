@@ -28,6 +28,22 @@ var get = exports._get = function(func, obj) {
     null;
 }
 
+// Borrowed from Mustache.js
+var htmlEscape = exports.htmlEscape = function(s) {
+  s = String(s === null ? '' : s);
+  return s.replace(/&(?!\w+;)|["'<>\\]/g, function(s) {
+    switch(s) {
+      case '&': return '&amp;';
+      case '\\': return '\\\\';
+      case '"': return '&quot;';
+      case "'": return '&#39;';
+      case '<': return '&lt;';
+      case '>': return '&gt;';
+      default: return s;
+    }
+  });
+}
+
 function parse(template) {
   var stack = [],
       events = [],
@@ -35,22 +51,6 @@ function parse(template) {
       htmlIndex = 0,
       placeholder = /^(\{{2,3})(\w+)\}{2,3}$/,
       elementParse;
-  
-  // Borrowed from Mustache.js
-  function htmlEscape(s) {
-    s = String(s === null ? '' : s);
-    return s.replace(/&(?!\w+;)|["'<>\\]/g, function(s) {
-      switch(s) {
-        case '&': return '&amp;';
-        case '\\': return '\\\\';
-        case '"': return '&quot;';
-        case "'": return '&#39;';
-        case '<': return '&lt;';
-        case '>': return '&gt;';
-        default: return s;
-      }
-    });
-  }
 
   function modelText(name, escaped, quote) {
     return function(data) {
@@ -128,7 +128,7 @@ function parse(template) {
             var path = data[name].model;
             if (path) {
               model.events.bind(path,
-                [attrs._id || attrs.id, 'html', null, data[name].view]
+                [attrs._id || attrs.id, 'html', escaped, data[name].view]
               );
             }
           });
