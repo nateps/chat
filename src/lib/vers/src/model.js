@@ -121,7 +121,7 @@ var events = exports.events = new EventDispatcher(
 
 var get = exports.get = function(path) {
   var obj = world,
-      i, prop, ref, key, func;
+      i, prop, ref, key, func, inputs;
   if (path) {
     path = path.split('.');
     for (i = 0; prop = path[i++];) {
@@ -132,8 +132,10 @@ var get = exports.get = function(path) {
         key = get(key);
         obj = ref[key];
       } else if (func = obj._f) {
+        inputs = funcInputs[func];
+        inputs = (inputs.map) ? inputs.map(get) : [];
         func = funcs[func];
-        if (func) obj = func();
+        if (func) obj = func.apply(null, inputs);
       }
     }
   }

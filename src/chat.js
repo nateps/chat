@@ -36,9 +36,8 @@ if (process.title === 'node') {
 
 view.make('title', { model: '_session.title' });
 model.makeFunc('title', ['messages', '_session.user.name'],
-  function() {
-    return 'Chat (' + model.get('messages').length + ') - ' +
-      model.get('_session.user.name');
+  function(messages, userName) {
+    return 'Chat (' + messages.length + ') - ' + userName;
   }
 );
 
