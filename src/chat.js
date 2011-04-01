@@ -1,8 +1,9 @@
 var vers = require('./lib/vers')(module, exports),
+    _ = exports.utils = vers.utils,
     model = vers.model,
     view = vers.view;
 
-if (process.title === 'node') {
+if (_.onServer) {
   require('fs').readFile(__dirname + '/chat.styl', 'utf8', function(err, styl) {
     require('stylus').render(styl, {compress: true}, function(err, css){
       view.head('<meta name=viewport content=width=device-width>' + 

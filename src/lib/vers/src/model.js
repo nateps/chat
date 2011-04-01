@@ -1,9 +1,9 @@
-require('./utils')((function(){return this})());
-var EventDispatcher = require('./EventDispatcher'),
+var _ = require('./utils'),
+    EventDispatcher = require('./EventDispatcher'),
     world = {},
     funcs = {},
     funcInputs = {},
-    emptyEl = (onServer) ? null : document.createElement('div'),
+    emptyEl = (_.onServer) ? null : document.createElement('div'),
     setMethods = {
       attr: function(value, el, attr) {
         el.setAttribute(attr, value);
@@ -27,14 +27,15 @@ var EventDispatcher = require('./EventDispatcher'),
     },
     socket, view;
 
+exports._link = function(v) {
+  view = v;
+}
+
 exports.setSocket = function(o) {
   socket = o;
 }
-exports.setView = function(o) {
-  view = o;
-}
 
-if (!onServer) {
+if (!_.onServer) {
   socket = new io.Socket(null, {port: 8001});
   socket.connect();
   socket.on('message', function(message) {
@@ -47,7 +48,7 @@ var events = exports.events = new EventDispatcher(
   function(listener, value, options) {
     var id, method, property, viewFunc, el, s,
         oldPathName, pathName, listenerObj, modelFunc;
-    if (isArray(listener)) {
+    if (_.isArray(listener)) {
       id = listener[0];
       method = listener[1];
       property = listener[2];
@@ -96,7 +97,7 @@ var events = exports.events = new EventDispatcher(
     path = pathName.split('.');
     for (i = 0; prop = path[i++];) {
       obj = obj[prop];
-      if (isUndefined(obj)) return false; // Remove bad event handler
+      if (_.isUndefined(obj)) return false; // Remove bad event handler
       if ((refName = obj._r) && (keyName = obj._k)) {
         key = get(keyName);
         ref = get(refName);
@@ -126,7 +127,7 @@ var get = exports.get = function(path) {
     path = path.split('.');
     for (i = 0; prop = path[i++];) {
       obj = obj[prop];
-      if (isUndefined(obj)) return null; // Return null if not found
+      if (_.isUndefined(obj)) return null; // Return null if not found
       if ((ref = obj._r) && (key = obj._k)) {
         ref = get(ref);
         key = get(key);
@@ -144,9 +145,9 @@ var get = exports.get = function(path) {
 
 var send = function(method, args, broadcast){
   var message = JSON.stringify(
-    [method, toArray(args)]
+    [method, _.toArray(args)]
   );
-  if (onServer) {
+  if (_.onServer) {
     if (broadcast && socket) {
       socket.broadcast(message);
     }

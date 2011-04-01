@@ -1,3 +1,5 @@
+var _ = require('./utils');
+
 var EventDispatcher = module.exports = function(triggerCallback, bindCallback) {
   this._triggerCallback = triggerCallback;
   if (bindCallback) {
@@ -26,7 +28,7 @@ EventDispatcher.prototype = {
     var names = this._names,
         listeners = names[name],
         callback = this._triggerCallback;
-    if (listeners && !onServer) {
+    if (listeners && !_.onServer) {
       Object.keys(listeners).forEach(function(key) {
         var listener = JSON.parse(key);
         if (!callback(listener, value, options)) {

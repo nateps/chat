@@ -1,5 +1,5 @@
-require('./utils')((function(){return this})());
-var EventDispatcher = require('./EventDispatcher'),
+var _ = require('./utils'),
+    EventDispatcher = require('./EventDispatcher'),
     getMethods = {
       attr: function(el, attr) {
         return el.getAttribute(attr);
@@ -13,8 +13,8 @@ var EventDispatcher = require('./EventDispatcher'),
     },
     model;
 
-exports.setModel = function(o) {
-  model = o;
+exports._link = function(m) {
+  model = m;
 }
 
 var events = exports.events = new EventDispatcher(
@@ -41,7 +41,7 @@ var domHandler = function(e) {
   if (target.nodeType === 3) target = target.parentNode; // Fix for Safari bug
   events.trigger(e.type, target.id);
 }
-if (!onServer) {
+if (!_.onServer) {
   ['keyup', 'keydown'].forEach(function(item) {
     document['on' + item] = domHandler;
   });

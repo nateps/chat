@@ -1,6 +1,7 @@
 var express = require('express'),
     app = express.createServer(),
     chat = require('./src/chat')(app),
+    _ = chat.utils,
     userImages = [
       '/images/user_red.png',
       '/images/user_blue.png',
@@ -20,7 +21,7 @@ app.use(express.cookieParser());
 app.use(express.session({ secret: 'steve_urkel' }));
 
 app.get('/', function(req, res) {
-  var userId = req.session.userId = (typeof req.session.userId === 'number') ?
+  var userId = req.session.userId = _.isNumber(req.session.userId) ?
         req.session.userId : newUserId++,
       modelName = 'users.' + userId;
   if (chat.model.get(modelName) === null) {

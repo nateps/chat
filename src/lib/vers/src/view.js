@@ -1,17 +1,16 @@
-require('./utils')((function(){return this})());
-var htmlParser = require('./htmlParser'),
+var _ = require('./utils'),
+    htmlParser = require('./htmlParser'),
     views = {},
     loadFuncs = '',
     head = '',
     foot = '',
-    clientName, model, dom;
+    clientName, dom, model;
 
-exports.setModel = function(o) {
-  model = o;
-};
-exports.setDom = function(o) {
-  dom = o;
-};
+exports._link = function(d, m) {
+  dom = d;
+  model = m;
+}
+
 exports.setClientName = function(s) {
   clientName = s;
 };
@@ -30,7 +29,7 @@ uniqueId._count = 0;
 var get = exports._get = function(view, obj) {
   view = views[view];
   return (view) ?
-    (isArray(obj) ? obj.reduce(function(memo, item) {
+    (_.isArray(obj) ? obj.reduce(function(memo, item) {
       return memo + view(item);
     }, '') : view(obj)) : '';
 };
@@ -96,13 +95,13 @@ function parse(template) {
   
   htmlParser.parse(template, {
     start: function(tag, attrs) {
-      forEach(attrs, function(key, value) {
+      _.forEach(attrs, function(key, value) {
         var match, name, escaped, method, setMethod;
         match = placeholder.exec(value);
         if (match) {
           escaped = match[1] === '{{';
           name = match[2];
-          if (isUndefined(attrs.id)) {
+          if (_.isUndefined(attrs.id)) {
             attrs.id = function() { return attrs._id = uniqueId(); };
           }
           method = (tag in elementParse) ?
@@ -128,7 +127,7 @@ function parse(template) {
         text = modelText(name, escaped);
         if (last[0] === 'start') {
           attrs = last[2];
-          if (isUndefined(attrs.id)) {
+          if (_.isUndefined(attrs.id)) {
             attrs.id = function() { return attrs._id = uniqueId(); };
           }          
           events.push(function(data) {
@@ -150,7 +149,7 @@ function parse(template) {
 
   stack.forEach(function(item) {
     function pushValue(value, quote) {
-      if (isFunction(value)) {
+      if (_.isFunction(value)) {
         htmlIndex = html.push(value, '') - 1;
       } else {
         html[htmlIndex] += (quote && value.indexOf(' ') !== -1) ?
@@ -160,7 +159,7 @@ function parse(template) {
     switch (item[0]) {
       case 'start':
         html[htmlIndex] += '<' + item[1];
-        forEach(item[2], function(key, value) {
+        _.forEach(item[2], function(key, value) {
           html[htmlIndex] += ' ' + key + '=';
           pushValue(value, true);
         });
@@ -176,7 +175,7 @@ function parse(template) {
 
   return function(data, obj) {
     var rendered = html.reduce(function(memo, item) {
-      return memo + (isFunction(item) ? item(data) : item);
+      return memo + (_.isFunction(item) ? item(data) : item);
     }, '');
     events.forEach(function(item) { item(data); });
     return rendered;
@@ -203,10 +202,10 @@ function simpleView(name) {
 
 exports.make = function(name, data, template, after) {
   var render = (template) ? parse(template) : simpleView(name),
-      func = isFunction(data) ?
+      func = _.isFunction(data) ?
         function() { return render(data.apply(null, arguments)); } :
         function() { return render(data); };
-  if (onServer) {
+  if (_.onServer) {
     if (after) preLoad(after);
     views[name] = func;
   } else {
@@ -218,7 +217,7 @@ exports.make = function(name, data, template, after) {
   }
 };
 
-if (onServer) {
+if (_.onServer) {
   exports.html = function() {
     var jsmin = require('jsmin').jsmin;
     model.events._names = {};
