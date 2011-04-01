@@ -2,6 +2,7 @@ require('./utils')((function(){return this})());
 var EventDispatcher = require('./EventDispatcher'),
     world = {},
     funcs = {},
+    funcInputs = {},
     emptyEl = (onServer) ? null : document.createElement('div'),
     setMethods = {
       attr: function(value, el, attr) {
@@ -107,9 +108,9 @@ var events = exports.events = new EventDispatcher(
         events.bind(eventPath, listener);
         // Cancel the creation of the event to the reference itself
         return false;
-      } else if ((modelFunc = obj._f) && (inputs = obj._i)) {
+      } else if ((modelFunc = obj._f)) {
         // Bind a listener to each of the inputs to the function
-        inputs.forEach(function(item) {
+        funcInputs[modelFunc].forEach(function(item) {
           events.bind(item, {_f: modelFunc, _p: pathName});
         });
       }
@@ -202,10 +203,13 @@ var push = exports.push = function(name, value, broadcast) {
   _push(name, value, true, broadcast);
 };
 
-exports.func = function(name, inputs, func) {
-  funcs[name] = func;
-  return {_f: name, _i: inputs};
+exports.func = function(name) {
+  return {_f: name};
 };
+exports.makeFunc = function(name, inputs, func) {
+  funcs[name] = func;
+  funcInputs[name] = inputs;
+}
 exports.ref = function(ref, key) {
   return {_r: ref, _k: key};
 };

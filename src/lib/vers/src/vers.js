@@ -46,7 +46,6 @@ module.exports = function(clientModule, clientExports) {
         filter: jsmin
       }));
       
-      clientExports.make();
       return clientExports;
     }
   } else {
@@ -55,7 +54,6 @@ module.exports = function(clientModule, clientExports) {
       model.init(modelData);
       model.events._names = modelEvents;
       dom.events._names = domEvents;
-      clientExports.make();
       return clientExports;
     }
   }
