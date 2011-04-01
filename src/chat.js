@@ -4,13 +4,45 @@ var vers = require('./lib/vers')(module, exports),
     view = vers.view;
 
 if (_.onServer) {
+  model.init({
+    users: {},
+    messages: [],
+    _session: {
+      userId: 0,
+      user: model.ref('users', '_session.userId'),
+      newComment: '',
+      title: model.func('title')
+    }
+  });
+  
+  view.make('Title', { model: '_session.title' });
+  
   require('fs').readFile(__dirname + '/chat.styl', 'utf8', function(err, styl) {
     require('stylus').render(styl, {compress: true}, function(err, css){
-      view.head('<meta name=viewport content=width=device-width>' + 
+      view.make('Head',
+        '<meta name=viewport content=width=device-width>' + 
         '<style>' + css + '</style>'
       );
     });
   });
+  
+  view.make('Body', {
+      messages: { model: 'messages', view: 'message' },
+      userPicUrl: { model: '_session.user.picUrl' },
+      userName: { model: '_session.user.name' },
+      newComment: { model: '_session.newComment' }
+    },
+    '<div id=messageContainer><ul id=messageList>{{{messages}}}</ul></div>' +
+      '<div id=foot>' +
+        '<img id=inputPic src={{{userPicUrl}}} class=pic>' +
+        '<div id=inputs>' +
+          '<input id=inputName value={{userName}}>' +
+          '<form id=inputForm action=javascript:chat.postMessage()>' +
+            '<input id=commentInput value={{newComment}} silent>' +
+          '</form>' +
+        '</div>' +
+      '</div>'
+  );
   
   view.preLoad(function() {
     function winResize() {
@@ -22,20 +54,8 @@ if (_.onServer) {
     window.onresize = winResize;
     $('commentInput').focus();
   });
-  
-  model.init({
-    users: {},
-    messages: [],
-    _session: {
-      userId: 0,
-      user: model.ref('users', '_session.userId'),
-      newComment: '',
-      title: model.func('title')
-    }
-  });
 }
 
-view.make('title', { model: '_session.title' });
 model.makeFunc('title', ['messages', '_session.user.name'],
   function(messages, userName) {
     return 'Chat (' + messages.length + ') - ' + userName;
@@ -58,24 +78,6 @@ view.make('message',
   function() {
     $('messageContainer').scrollTop = $('messageList').offsetHeight;
   }
-);
-
-view.make('body', {
-    messages: { model: 'messages', view: 'message' },
-    userPicUrl: { model: '_session.user.picUrl' },
-    userName: { model: '_session.user.name' },
-    newComment: { model: '_session.newComment' }
-  },
-  '<div id=messageContainer><ul id=messageList>{{{messages}}}</ul></div>' +
-    '<div id=foot>' +
-      '<img id=inputPic src={{{userPicUrl}}} class=pic>' +
-      '<div id=inputs>' +
-        '<input id=inputName value={{userName}}>' +
-        '<form id=inputForm action=javascript:chat.postMessage()>' +
-          '<input id=commentInput value={{newComment}} silent>' +
-        '</form>' +
-      '</div>' +
-    '</div>'
 );
 
 exports.postMessage = function() {

@@ -2,23 +2,14 @@ var _ = require('./utils'),
     htmlParser = require('./htmlParser'),
     views = {},
     loadFuncs = '',
-    head = '',
-    foot = '',
     clientName, dom, model;
 
 exports._link = function(d, m) {
   dom = d;
   model = m;
 }
-
-exports.setClientName = function(s) {
+exports._setClientName = function(s) {
   clientName = s;
-};
-exports.head = function(s) {
-  head = s;
-};
-exports.foot = function(s) {
-  foot = s;
 };
 
 var uniqueId = exports.uniqueId = function() {
@@ -192,7 +183,7 @@ function simpleView(name) {
         obj = path ? model.get(path) : datum,
         text = datum.view ? get(datum.view, obj) : obj;
     if (path) {
-      if (name === 'title') {
+      if (name === 'Title') {
         model.events.bind(path, ['__document', 'prop', 'title']);
       }
     }
@@ -224,7 +215,7 @@ if (_.onServer) {
     dom.events._names = {};
     uniqueId._count = 0;
     return '<!DOCTYPE html>' +
-      '<title>' + get('title') + '</title>' + head + get('body') +
+      '<title>' + get('Title') + '</title>' + get('Head') + get('Body') +
       '<script>function $(s){return document.getElementById(s)}' + 
       jsmin(loadFuncs) + '</script>' +
       '<script src=/socket.io/socket.io.js></script>' +
@@ -233,6 +224,6 @@ if (_.onServer) {
       uniqueId._count + ',' +
       JSON.stringify(model.get()).replace(/<\//g, '<\\/') + ',' +
       JSON.stringify(model.events._names) + ',' +
-      JSON.stringify(dom.events._names) + ');</script>' + foot;
+      JSON.stringify(dom.events._names) + ');</script>' + get('Foot');
   };
 }
