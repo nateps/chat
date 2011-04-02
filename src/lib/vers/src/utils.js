@@ -47,9 +47,7 @@ _.toArray = function(iterable) {
 
 // Custom utils:
 
-console.log(process.title);
-
-_.onServer = process.title === 'node';
+_.onServer = _.isUndefined(window);
 
 var forEach = _.forEach = function(obj, iterator) {
   for (var key in obj) {
