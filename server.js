@@ -1,3 +1,5 @@
+console.log(process.env['DUOSTACK_DB_MONGODB']);
+
 var url = require('url'),
     dbUri = url.parse(process.env['DUOSTACK_DB_MONGODB'] ||
       'mongodb://127.0.0.1:27017/chat'
