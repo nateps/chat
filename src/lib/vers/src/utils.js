@@ -47,6 +47,8 @@ _.toArray = function(iterable) {
 
 // Custom utils:
 
+console.log(process.title);
+
 _.onServer = process.title === 'node';
 
 var forEach = _.forEach = function(obj, iterator) {
