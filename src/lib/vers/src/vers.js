@@ -33,6 +33,7 @@ module.exports = function(clientModule, clientExports) {
         });
       });
       model._setSocket(socket);
+      clientExports.socket = socket;
 
       app.use(browserify({
         base: clientModule.paths[0].replace('/node_modules', ''),
