@@ -47,7 +47,7 @@ _.toArray = function(iterable) {
 
 // Custom utils:
 
-_.onServer = _.isUndefined(window);
+_.onServer = typeof window === 'undefined';
 
 var forEach = _.forEach = function(obj, iterator) {
   for (var key in obj) {
