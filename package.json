@@ -12,6 +12,8 @@
   "dependencies": {
     "express": "*",
     "stylus": "*",
-    "./src/lib/vers": "*"
+    "socket.io": "*",
+    "browserify": "*",
+    "jsmin": "*"
   }
 }
