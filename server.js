@@ -1,5 +1,16 @@
-var mongolian = new (require('./lib/mongolian'))(),
-    db = mongolian.db('chat'),
+var url = require('url'),
+    dbUri = url.parse(process.env['DUOSTACK_DB_MONGODB'] ||
+      'mongodb://127.0.0.1:27017/chat'
+    ),
+    dbInfo = {
+      host: dbUri.hostname,
+      port: parseInt(dbUri.port),
+      dbname: dbUri.pathname.substr(1),
+      username: (dbUri.auth) ? dbUri.auth.split(':')[0] : null,
+      password: (dbUri.auth) ? dbUri.auth.split(':')[1] : null
+    },
+    mongolian = new (require('./lib/mongolian'))(dbInfo),
+    db = mongolian.db(dbInfo.dbname),
     messages = db.collection('messages'),
     users = db.collection('users'),
     mongoStore = require('connect-mongodb'),
@@ -62,9 +73,7 @@ app.use(express.static('public'));
 app.use(express.cookieParser());
 app.use(express.session({
   secret: 'steve_urkel',
-  store: mongoStore({
-    dbname: 'chat'
-  })
+  store: mongoStore(dbInfo)
 }));
 
 app.get('/', function(req, res) {
