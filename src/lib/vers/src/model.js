@@ -55,7 +55,7 @@ var events = exports.events = new EventDispatcher(
       if (!el) return false;
       // If this is the result of a model function assignment, keep the handler
       // but don't perform any updates
-      if (value._f) return true;
+      if (value.$f) return true;
       if (options) {
         switch (options) {
           case 'push':
@@ -68,7 +68,7 @@ var events = exports.events = new EventDispatcher(
         setMethods[method](s, el, property);
       }
       return true;
-    } else if ((oldPathName = listener._o) && (pathName = listener._p) && (listenerObj = listener._l)) {
+    } else if ((oldPathName = listener.$o) && (pathName = listener.$p) && (listenerObj = listener.$l)) {
       events.unbind(oldPathName, listenerObj);
       events.bind(pathName, listenerObj);
       // Set the object to itself to trigger change event
@@ -76,7 +76,7 @@ var events = exports.events = new EventDispatcher(
       // Remove this handler, since it will be replaced with a new handler
       // in the bind action above
       return false;
-    } else if ((modelFunc = listener._f) && (pathName = listener._p)) {
+    } else if ((modelFunc = listener.$f) && (pathName = listener.$p)) {
       events.trigger(pathName, get(pathName));
       return true;
     }
@@ -89,21 +89,21 @@ var events = exports.events = new EventDispatcher(
     for (i = 0; prop = path[i++];) {
       obj = obj[prop];
       if (_.isUndefined(obj)) return false; // Remove bad event handler
-      if ((refName = obj._r) && (keyName = obj._k)) {
+      if ((refName = obj.$r) && (keyName = obj.$k)) {
         key = get(keyName);
         ref = get(refName);
         eventPath = [refName, key].concat(path.slice(i)).join('.');
         // Register an event to update the other event handler when the
         // reference key changes
-        events.bind(keyName, {_o: eventPath, _p: pathName, _l: listener});
+        events.bind(keyName, {$o: eventPath, $p: pathName, $l: listener});
         // Bind the event to the dereferenced path
         events.bind(eventPath, listener);
         // Cancel the creation of the event to the reference itself
         return false;
-      } else if ((modelFunc = obj._f)) {
+      } else if ((modelFunc = obj.$f)) {
         // Bind a listener to each of the inputs to the function
         funcInputs[modelFunc].forEach(function(item) {
-          events.bind(item, {_f: modelFunc, _p: pathName});
+          events.bind(item, {$f: modelFunc, $p: pathName});
         });
       }
     }
@@ -119,11 +119,11 @@ var get = exports.get = function(path) {
     for (i = 0; prop = path[i++];) {
       obj = obj[prop];
       if (_.isUndefined(obj)) return null; // Return null if not found
-      if ((ref = obj._r) && (key = obj._k)) {
+      if ((ref = obj.$r) && (key = obj.$k)) {
         ref = get(ref);
         key = get(key);
         obj = ref[key];
-      } else if (func = obj._f) {
+      } else if (func = obj.$f) {
         inputs = funcInputs[func];
         inputs = (inputs.map) ? inputs.map(get) : [];
         func = funcs[func];
@@ -156,7 +156,7 @@ var _set = exports._set = function(path, value, silent, sendUpdate, broadcast) {
     len = path.length;
     for (i = 0; prop = path[i++];) {
       child = obj[prop];
-      if (child && (ref = child._r) && (key = child._k)) {
+      if (child && (ref = child.$r) && (key = child.$k)) {
         key = get(key);
         eventPath = [ref, key];
         ref = get(ref);
@@ -198,14 +198,14 @@ var push = exports.push = function(name, value, broadcast) {
 };
 
 exports.func = function(name) {
-  return {_f: name};
+  return {$f: name};
 };
 exports.makeFunc = function(name, inputs, func) {
   funcs[name] = func;
   funcInputs[name] = inputs;
 }
 exports.ref = function(ref, key) {
-  return {_r: ref, _k: key};
+  return {$r: ref, $k: key};
 };
 exports.init = function(w) {
   world = w;
