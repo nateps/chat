@@ -1,20 +1,5 @@
-console.log(process.env['DUOSTACK_DB_MONGODB']);
-
-var url = require('url'),
-    dbUri = url.parse(process.env['DUOSTACK_DB_MONGODB'] ||
-      'mongodb://127.0.0.1:27017/chat'
-    ),
-    dbInfo = {
-      host: dbUri.hostname,
-      port: parseInt(dbUri.port),
-      dbname: dbUri.pathname.substr(1),
-      username: (dbUri.auth) ? dbUri.auth.split(':')[0] : null,
-      password: (dbUri.auth) ? dbUri.auth.split(':')[1] : null
-    },
-    mongolian = new (require('./lib/mongolian'))(dbInfo),
-    db = mongolian.db(dbInfo.dbname),
-    messages = db.collection('messages'),
-    users = db.collection('users'),
+var dbUri = process.env['DUOSTACK_DB_MONGODB'] || 'mongodb://test:test@127.0.0.1:27017/chat',
+    mongo = require('mongodb'),
     mongoStore = require('connect-mongodb'),
     express = require('express'),
     app = express.createServer(),
@@ -33,24 +18,44 @@ var url = require('url'),
       '/images/user_dark_gray.png',
     ],
     newUserId = 0,
-    MAX_MESSAGES = 100;
+    MAX_MESSAGES = 100,
+    db, messages, users;
 
 function skipMessages(count) {
   return Math.max(count - MAX_MESSAGES, 0);
 }
 
-messages.count(function(err, count) {
-  messages.find().skip(skipMessages(count)).toArray(function(err, array) {
-    array.forEach(function(item) {
-      delete item._id;
+function loadDb() {
+  messages.count(function(err, count) {
+    messages.find({}, { skip: skipMessages(count) }, function(err, cursor) {
+      cursor.toArray(function(err, a) {
+        a.forEach(function(item) {
+          delete item._id;
+        });
+        chat.model.set('messages', a);
+      });
     });
-    chat.model.set('messages', array);
   });
-});
-users.find().forEach(function(user) {
-  delete user._id;
-  newUserId = Math.max(user.userId + 1, newUserId);
-  chat.model.set('users.' + user.userId, user);
+  users.find(function(err, cursor) {
+    cursor.each(function(err, user) {
+      if (user && _.isDefined(user.userId)) {
+        delete user._id;
+        newUserId = Math.max(user.userId + 1, newUserId);
+        chat.model.set('users.' + user.userId, user);
+      }
+    });
+  });
+}
+
+mongo.connect(dbUri, function(err, obj) {
+  db = obj;
+  db.collection('messages', function(err, obj) {
+    messages = obj;
+    db.collection('users', function(err, obj) {
+      users = obj;
+      loadDb();
+    });
+  });
 });
 
 chat.socket.on('connection', function(client) {      
@@ -71,18 +76,39 @@ chat.socket.on('connection', function(client) {
   });
 });
 
+function parseConnectionURL(url) {
+  var config = require('url').parse(url),
+      auth = null;
+
+  if (!config.protocol.match(/^mongo/)) {
+    throw new Error("URL must be in the format mongo://user:pass@host:port/dbname");
+  }
+
+  if (config.auth) {
+    auth = config.auth.split(':', 2);
+  }
+
+  return {
+    host: config.hostname || defaults.host,
+    port: config.port || defaults.port,
+    dbname: config.pathname.replace(/^\//, '') || defaults.dbname,
+    username: auth && auth[0],
+    password: auth && auth[1]
+  };
+}
+
 app.use(express.static('public'));
 app.use(express.cookieParser());
 app.use(express.session({
   secret: 'steve_urkel',
-  store: mongoStore(dbInfo)
+  store: mongoStore(parseConnectionURL(dbUri))
 }));
 
 app.get('/', function(req, res) {
   var userId = req.session.userId = _.isNumber(req.session.userId) ?
         req.session.userId : newUserId++,
       modelName = 'users.' + userId,
-      newUser, messages;
+      newUser, messagesModel;
   if (chat.model.get(modelName) === null) {
     newUser = {
       name: 'User ' + (userId + 1),
@@ -90,14 +116,14 @@ app.get('/', function(req, res) {
       userId: userId
     };
     chat.model.set(modelName, newUser, true);
-    users.upsert({ userId: userId }, newUser);
+    users.update({ userId: userId }, newUser, { upsert: true });
   };
   chat.model.set('_session.userId', userId);
-  messages = chat.model.get('messages');
+  messagesModel = chat.model.get('messages');
   // TODO: There should be a model method to remove elements from an array.
   // I'm just splicing the messages list in the server's model, since I don't intend
   // to update connected clients
-  messages.splice(0, skipMessages(messages.length));
+  messagesModel.splice(0, skipMessages(messagesModel.length));
   res.send(chat.view.html());
 });
 

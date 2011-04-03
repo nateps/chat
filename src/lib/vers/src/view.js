@@ -55,7 +55,7 @@ function parse(template) {
           obj = datum.model ? model.get(datum.model) : datum,
           text = datum.view ? get(datum.view, obj) : obj;
       if (escaped) text = htmlEscape(text);
-      if (quote && text.indexOf(' ') !== -1) text = '"' + text + '"';
+      if (quote && text && text.indexOf(' ') !== -1) text = '"' + text + '"';
       return text;
     }
   }
@@ -143,7 +143,7 @@ function parse(template) {
       if (_.isFunction(value)) {
         htmlIndex = html.push(value, '') - 1;
       } else {
-        html[htmlIndex] += (quote && value.indexOf(' ') !== -1) ?
+        html[htmlIndex] += (quote && value && value.indexOf(' ') !== -1) ?
           '"' + value + '"' : value;
       }
     }

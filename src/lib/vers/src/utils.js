@@ -36,6 +36,9 @@ _.isNull = function(obj) {
 _.isUndefined = function(obj) {
   return obj === void 0;
 };
+_.isDefined = function(obj) {
+  return obj !== void 0;
+}
 // Safely convert anything iterable into a real, live array.
 _.toArray = function(iterable) {
   if (!iterable) return [];
