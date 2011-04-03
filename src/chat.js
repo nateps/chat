@@ -20,7 +20,7 @@ if (_.onServer) {
   require('fs').readFile(__dirname + '/chat.styl', 'utf8', function(err, styl) {
     require('stylus').render(styl, {compress: true}, function(err, css){
       view.make('Head',
-        '<meta name=viewport content=width=device-width>' + 
+        '<meta name=viewport content="width=device-width">' + 
         '<style>' + css + '</style>'
       );
     });
