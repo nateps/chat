@@ -42,8 +42,7 @@ var htmlEscape = exports.htmlEscape = function(s) {
 };
 
 function quoteAttr(s) {
-  return (s && s.indexOf) ? 
-    ((s.indexOf(' ') !== -1) ? '"' + s + '"' : s) : '""';
+  return (s && s.indexOf) ? (/[ =]/.test(s) ? '"' + s + '"' : s) : '""';
 }
 
 function parse(template) {
