@@ -1,4 +1,4 @@
-var dbUri = process.env['DUOSTACK_DB_MONGODB'] || 'mongodb://test:test@127.0.0.1:27017/chat',
+var dbUri = 'mongodb://127.0.0.1:27017/chat',
     mongo = require('mongodb'),
     mongoStore = require('connect-mongodb'),
     express = require('express'),
@@ -128,5 +128,5 @@ app.get('/', function(req, res) {
   res.send(chat.view.html());
 });
 
-// Using this port, since it supports websockets on duostack
-app.listen(9980);
+// This should work with Joyent
+app.listen(process.env.PORT || 8001);
