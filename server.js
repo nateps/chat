@@ -1,4 +1,4 @@
-var dbUri = 'mongodb://vers.no.de:27017/chat',
+var dbUri = 'mongodb://127.0.0.1:27017/chat',
     mongo = require('mongodb'),
     mongoStore = require('connect-mongodb'),
     express = require('express'),
