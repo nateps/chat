@@ -50,7 +50,6 @@ function parse(template) {
       events = [],
       html = [''],
       htmlIndex = 0,
-      placeholder = /^(\{{2,3})(\w+)\}{2,3}$/,
       elementParse;
 
   function modelText(name, escaped, quote) {
@@ -62,6 +61,16 @@ function parse(template) {
       if (quote) text = quoteAttr(text);
       return text;
     }
+  }
+  
+  function extractPlaceholder(text) {
+    var match = /^(.*?)(\{{2,3})(\w+)\}{2,3}(.*)$/.exec(text);
+    return (match) ? {
+      pre: match[1],
+      escaped: match[2] === '{{',
+      name: match[3],
+      post: match[4]
+    } : null;
   }
   
   elementParse = {
@@ -86,16 +95,14 @@ function parse(template) {
       }
       return method;
     }
-  }
+  };
   
-  htmlParser.parse(template, {
+  htmlParse = {
     start: function(tag, attrs) {
       _.forEach(attrs, function(key, value) {
-        var match, name, escaped, method, setMethod;
-        match = placeholder.exec(value);
-        if (match) {
-          escaped = match[1] === '{{';
-          name = match[2];
+        var match, name, method, setMethod;
+        if (match = extractPlaceholder(value)) {
+          name = match.name;
           if (_.isUndefined(attrs.id)) {
             attrs.id = function() { return attrs._id = uniqueId(); };
           }
@@ -107,19 +114,25 @@ function parse(template) {
               model.events.bind(path, [attrs._id || attrs.id, method, key]);
             }
           });
-          attrs[key] = modelText(name, escaped, true);
+          attrs[key] = modelText(name, match.escaped, true);
         }
       });
       stack.push(['start', tag, attrs]);
     },
     chars: function(text) {
-      var last = stack[stack.length - 1],
-          attrs, match, name, escaped;
-      match = placeholder.exec(text);
-      if (match) {
-        escaped = match[1] === '{{';
-        name = match[2];
+      var last, attrs, match, name, escaped, pre, post;
+      text = text.replace(/\n *$/, '');
+      if (match = extractPlaceholder(text)) {
+        name = match.name;
+        escaped = match.escaped;
+        pre = match.pre;
+        post = match.post;
+        
+        if (pre) stack.push(['chars', pre]);
+        if (pre || post) stack.push(['start', 'span', {}]);
+        
         text = modelText(name, escaped);
+        last = stack[stack.length - 1];
         if (last[0] === 'start') {
           attrs = last[2];
           if (_.isUndefined(attrs.id)) {
@@ -135,12 +148,16 @@ function parse(template) {
           });
         }
       }
-      stack.push(['chars', text]);
+      if (text) stack.push(['chars', text]);
+      if (pre || post) stack.push(['end', 'span']);
+      if (post) htmlParse.chars(post);
     },
     end: function(tag) {
       stack.push(['end', tag]);
     }
-  });
+  };
+  
+  htmlParser.parse(template, htmlParse);
 
   stack.forEach(function(item) {
     function pushValue(value, quote) {
@@ -194,8 +211,9 @@ function simpleView(name) {
   };
 };
 
-exports.make = function(name, data, template, after) {
-  var render = (template) ? parse(template) : simpleView(name),
+exports.make = function(name, data, template, options) {
+  var after = options && options.after,
+      render = (template) ? parse(template) : simpleView(name),
       func = _.isFunction(data) ?
         function() { return render(data.apply(null, arguments)); } :
         function() { return render(data); };
