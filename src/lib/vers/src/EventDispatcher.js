@@ -16,7 +16,7 @@ EventDispatcher.prototype = {
     var names = this._names,
         key = JSON.stringify(listener),
         obj = names[name] || {};
-    obj[key] = 1;
+    obj[key] = true;
     names[name] = obj;
   },
   unbind: function(name, listener) {
@@ -36,5 +36,25 @@ EventDispatcher.prototype = {
         }
       });
     }
+  },
+  get: function() {
+    var names = this._names,
+        out = {};
+    Object.keys(names).forEach(function(name) {
+      out[name] = Object.keys(names[name]).map(function(item) {
+        return item.replace(/"/g, "'");
+      });
+    });
+    return out;
+  },
+  set: function(n) {
+    var names = this._names;
+    Object.keys(n).forEach(function(name) {
+      var obj = names[name] = {},
+          listeners = n[name];
+      listeners.forEach(function(listener) {
+        obj[listener.replace(/'/g, '"')] = true;
+      });
+    });
   }
 }

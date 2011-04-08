@@ -2,7 +2,7 @@ var _ = require('./utils'),
     htmlParser = require('./htmlParser'),
     views = {},
     loadFuncs = '',
-    clientName, dom, model;
+    clientName, jsFile, dom, model;
 
 exports._link = function(d, m) {
   dom = d;
@@ -10,6 +10,9 @@ exports._link = function(d, m) {
 }
 exports._setClientName = function(s) {
   clientName = s;
+};
+exports._setJsFile = function(s) {
+  jsFile = s;
 };
 
 var uniqueId = exports.uniqueId = function() {
@@ -124,7 +127,7 @@ function parse(template) {
       text = text.replace(/\n *$/, '');
       if (match = extractPlaceholder(text)) {
         name = match.name;
-        escaped = match.escaped;
+        escaped = _.toInteger(match.escaped);
         pre = match.pre;
         post = match.post;
         
@@ -139,11 +142,12 @@ function parse(template) {
             attrs.id = function() { return attrs._id = uniqueId(); };
           }          
           events.push(function(data) {
-            var path = data[name].model;
+            var path = data[name].model,
+                viewFunc = data[name].view,
+                params = [attrs._id || attrs.id, 'html', escaped];
             if (path) {
-              model.events.bind(path,
-                [attrs._id || attrs.id, 'html', escaped, data[name].view]
-              );
+              if (viewFunc) params.push(viewFunc);
+              model.events.bind(path, params);
             }
           });
         }
@@ -231,19 +235,24 @@ exports.make = function(name, data, template, options) {
 
 if (_.onServer) {
   exports.html = function() {
-    var jsmin = require('jsmin').jsmin;
+    var title, head, body, foot;
     model.events._names = {};
     dom.events._names = {};
     uniqueId._count = 0;
-    return '<!DOCTYPE html>' +
-      '<title>' + get('Title') + '</title>' + get('Head') + get('Body') +
+    // Note that view getter functions create event handlers on the model and
+    // DOM, so they have to be called before the events are serialized below
+    title = get('Title');
+    head = get('Head');
+    body = get('Body');
+    foot = get('Foot');
+    return '<!DOCTYPE html>' + '<title>' + title + '</title>' + head + body +
       '<script>function $(s){return document.getElementById(s)}' + 
-      jsmin(loadFuncs) + '</script>' +
-      '<script src=/browserify.js></script>' +
+      _.minify(loadFuncs, true) + '</script>' +
+      '<script src=' + jsFile + '></script>' +
       '<script>var ' + clientName + '=require("./' + clientName + '")(' +
       uniqueId._count + ',' +
       JSON.stringify(model.get()).replace(/<\//g, '<\\/') + ',' +
-      JSON.stringify(model.events._names) + ',' +
-      JSON.stringify(dom.events._names) + ');</script>' + get('Foot');
+      JSON.stringify(model.events.get()) + ',' +
+      JSON.stringify(dom.events.get()) + ');</script>' + foot;
   };
 }

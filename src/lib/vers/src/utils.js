@@ -38,7 +38,7 @@ _.isUndefined = function(obj) {
 };
 _.isDefined = function(obj) {
   return obj !== void 0;
-}
+};
 // Safely convert anything iterable into a real, live array.
 _.toArray = function(iterable) {
   if (!iterable) return [];
@@ -50,10 +50,32 @@ _.toArray = function(iterable) {
 
 // Custom utils:
 
+_.toInteger = function(obj) {
+  return obj - 0;
+};
+
 _.onServer = typeof window === 'undefined';
 
 var forEach = _.forEach = function(obj, iterator) {
   for (var key in obj) {
     iterator(key, obj[key]);
   }
+}
+
+if (_.onServer) {
+  _.minify = (function() {
+    var store = {},
+        uglify = require("uglify-js")
+    
+    return function(js, cache) {
+      if (cache && store[js]) return store[js];
+      var ufuncs = uglify.uglify,
+          out = uglify.parser.parse(js);
+      out = ufuncs.ast_mangle(out);
+      out = ufuncs.ast_squeeze(out);
+      out = ufuncs.gen_code(out);
+      if (cache) store[js] = out;
+      return out;
+    };
+  })();
 }

@@ -12,12 +12,17 @@ module.exports = function(clientModule, clientExports) {
     clientExports.dom = dom;
     clientExports.model = model;
     clientExports.view = view;
-    view._setClientName(/\/([^\/]+)\.js$/.exec(clientModule.filename)[1]);
 
     clientModule.exports = function(app) {
       var io = require('socket.io'),
-          browserify = require('browserify'),
-          jsmin = require('jsmin').jsmin,
+          browserify = require('../../../../node-browserify'),
+          path = require('path'),
+          clientDir = path.dirname(clientModule.filename),
+          js = browserify({
+            base: clientDir,
+            staticRoot: path.dirname(clientDir),
+            filter: _.minify
+          }),
           socket = io.listen(app, {transports: ['websocket', 'xhr-polling'] });
       socket.on('connection', function(client) {      
         client.on('message', function(message) {
@@ -26,7 +31,7 @@ module.exports = function(clientModule, clientExports) {
               args = data[1];
           // Don't store or send to other clients if the model path contains a name
           // that starts with an underscore
-          if (!/(^_)|(\._)/.test(args[0])) {
+          if (! /(^_)|(\._)/.test(args[0])) {
             model[method].apply(null, args);
             client.broadcast(message);
           }
@@ -35,11 +40,9 @@ module.exports = function(clientModule, clientExports) {
       model._setSocket(socket);
       clientExports.socket = socket;
 
-      app.use(browserify({
-        base: clientModule.paths[0].replace('/node_modules', ''),
-        mount: '/browserify.js',
-        filter: jsmin
-      }));
+      view._setClientName(path.basename(clientModule.filename, '.js'));
+      view._setJsFile(js.filename);
+      app.use(js.handle);
 
       return clientExports;
     };
@@ -56,8 +59,8 @@ module.exports = function(clientModule, clientExports) {
       
       view.uniqueId._count = count;
       model.init(modelData);
-      model.events._names = modelEvents;
-      dom.events._names = domEvents;
+      model.events.set(modelEvents);
+      dom.events.set(domEvents);
       return clientExports;
     };
   }

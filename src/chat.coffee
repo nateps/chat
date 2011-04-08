@@ -1,4 +1,4 @@
-vers = require("./lib/vers")(module, exports)
+vers = require("./lib/vers")()
 _ = exports.utils = vers.utils
 model = vers.model
 view = vers.view
