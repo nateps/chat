@@ -46,7 +46,7 @@ module.exports = function(clientModule, clientExports) {
   } else {
     clientModule.exports = function(count, modelData, modelEvents, domEvents) {
       var io = require('./socket.io'),
-          socket = new io.Socket(null, {port: 9980});
+          socket = new io.Socket(null);
       socket.connect();
       socket.on('message', function(message) {
         message = JSON.parse(message);
