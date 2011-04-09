@@ -98,11 +98,11 @@ function parseConnectionURL(url) {
   };
 }
 
-app.use(express.static('public'));
+app.use(express.static('public', { maxAge: 1000 * 60 * 60 * 24 * 365 }));
 app.use(express.cookieParser());
 app.use(express.session({
   secret: 'steve_urkel',
-  cookie: { maxAge: 1000 * 60 * 60 * 24 * 365 * 10 }, // 10 years
+  cookie: { maxAge: 1000 * 60 * 60 * 24 * 365 },
   store: mongoStore(parseConnectionURL(dbUri))
 }));
 
