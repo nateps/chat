@@ -4,7 +4,7 @@ var dbUri = (process.env.MONGODB_PATH || 'mongodb://127.0.0.1:27017') + '/chat',
     express = require('express'),
     connect = require('connect'),
     app = express.createServer(),
-    chat = require('./src/chat')(app),
+    chat = require('./lib/chat')(app),
     _ = chat.utils,
     userImages = [
       '/images/user_red.png',
