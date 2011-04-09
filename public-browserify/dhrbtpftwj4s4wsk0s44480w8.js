@@ -1509,14 +1509,34 @@ exports.extname = function(path) {
     _browserifyRequire.modules["path"]._cached = module.exports;
     return module.exports;
 };
-_browserifyRequire.modules["vers/dom"] = function () {
+_browserifyRequire.modules["vers"] = function () {
+    var module = { exports : {} };
+    var exports = module.exports;
+    var __dirname = "vers";
+    var __filename = "vers/index.js";
+    
+    var require = function (path) {
+        return _browserifyRequire.fromFile("vers", path);
+    };
+    
+    (function () {
+        // This file is needed, since browserify only knows how to find modules by
+// looking for a file named index.js in the root directory of the module name
+module.exports = require("./lib/vers");;
+    }).call(module.exports);
+    
+    _browserifyRequire.modules["vers"]._cached = module.exports;
+    return module.exports;
+};
+
+_browserifyRequire.modules["vers/lib/dom"] = function () {
     var module = { exports : {} };
     var exports = module.exports;
     var __dirname = "vers";
     var __filename = "vers/dom.js";
     
     var require = function (path) {
-        return _browserifyRequire.fromFile("vers/dom", path);
+        return _browserifyRequire.fromFile("vers/lib/dom", path);
     };
     
     (function () {
@@ -1570,18 +1590,18 @@ if (!_.onServer) {
 };
     }).call(module.exports);
     
-    _browserifyRequire.modules["vers/dom"]._cached = module.exports;
+    _browserifyRequire.modules["vers/lib/dom"]._cached = module.exports;
     return module.exports;
 };
 
-_browserifyRequire.modules["vers/EventDispatcher"] = function () {
+_browserifyRequire.modules["vers/lib/EventDispatcher"] = function () {
     var module = { exports : {} };
     var exports = module.exports;
     var __dirname = "vers";
     var __filename = "vers/EventDispatcher.js";
     
     var require = function (path) {
-        return _browserifyRequire.fromFile("vers/EventDispatcher", path);
+        return _browserifyRequire.fromFile("vers/lib/EventDispatcher", path);
     };
     
     (function () {
@@ -1647,18 +1667,18 @@ EventDispatcher.prototype = {
 };
     }).call(module.exports);
     
-    _browserifyRequire.modules["vers/EventDispatcher"]._cached = module.exports;
+    _browserifyRequire.modules["vers/lib/EventDispatcher"]._cached = module.exports;
     return module.exports;
 };
 
-_browserifyRequire.modules["vers/htmlParser"] = function () {
+_browserifyRequire.modules["vers/lib/htmlParser"] = function () {
     var module = { exports : {} };
     var exports = module.exports;
     var __dirname = "vers";
     var __filename = "vers/htmlParser.js";
     
     var require = function (path) {
-        return _browserifyRequire.fromFile("vers/htmlParser", path);
+        return _browserifyRequire.fromFile("vers/lib/htmlParser", path);
     };
     
     (function () {
@@ -1745,105 +1765,18 @@ var parse = exports.parse = function(html, handler) {
 };;
     }).call(module.exports);
     
-    _browserifyRequire.modules["vers/htmlParser"]._cached = module.exports;
+    _browserifyRequire.modules["vers/lib/htmlParser"]._cached = module.exports;
     return module.exports;
 };
 
-_browserifyRequire.modules["vers"] = function () {
-    var module = { exports : {} };
-    var exports = module.exports;
-    var __dirname = "vers";
-    var __filename = "vers/index.js";
-    
-    var require = function (path) {
-        return _browserifyRequire.fromFile("vers", path);
-    };
-    
-    (function () {
-        var dom = exports.dom = require('./dom'),
-    model = exports.model = require('./model'),
-    view = exports.view = require('./view'),
-    _ = exports.utils = require('./utils');
-
-dom._link(model);
-model._link(view);
-view._link(dom, model);
-
-module.exports = function(clientModule, clientExports) {
-  if (_.onServer) {
-    clientExports.dom = dom;
-    clientExports.model = model;
-    clientExports.view = view;
-
-    clientModule.exports = function(app) {
-      var io = require('socket.io'),
-          browserify = require('browserify'),
-          path = require('path'),
-          clientDir = path.dirname(clientModule.filename),
-          js = browserify({
-            staticRoot: path.dirname(clientDir),
-            base: clientDir,
-            require: ['vers'],
-            //filter: _.minify
-          }),
-          socket = io.listen(app, {transports: ['websocket', 'xhr-polling'] });
-      socket.on('connection', function(client) {      
-        client.on('message', function(message) {
-          var data = JSON.parse(message),
-              method = data[0],
-              args = data[1];
-          // Don't store or send to other clients if the model path contains a name
-          // that starts with an underscore
-          if (! /(^_)|(\._)/.test(args[0])) {
-            model[method].apply(null, args);
-            client.broadcast(message);
-          }
-        });
-      });
-      model._setSocket(socket);
-      clientExports.socket = socket;
-
-      view._setClientName(path.basename(clientModule.filename, '.js'));
-      view._setJsFile(js.filename);
-      app.use(js.handle);
-
-      return clientExports;
-    };
-  } else {
-    clientModule.exports = function(count, modelData, modelEvents, domEvents) {
-      var io = require('./socket.io'),
-          socket = new io.Socket(null);
-      socket.connect();
-      socket.on('message', function(message) {
-        message = JSON.parse(message);
-        model['_' + message[0]].apply(null, message[1]);
-      });
-      model._setSocket(socket);
-      
-      view.uniqueId._count = count;
-      model.init(modelData);
-      model.events.set(modelEvents);
-      dom.events.set(domEvents);
-      return clientExports;
-    };
-  }
-
-  return exports;
-};;
-    }).call(module.exports);
-    
-    _browserifyRequire.modules["vers"]._cached = module.exports;
-    return module.exports;
-};
-
-_browserifyRequire.modules["vers/model"] = function () {
+_browserifyRequire.modules["vers/lib/model"] = function () {
     var module = { exports : {} };
     var exports = module.exports;
     var __dirname = "vers";
     var __filename = "vers/model.js";
     
     var require = function (path) {
-        return _browserifyRequire.fromFile("vers/model", path);
+        return _browserifyRequire.fromFile("vers/lib/model", path);
     };
     
     (function () {
@@ -2061,18 +1994,18 @@ exports.init = function(w) {
 };;
     }).call(module.exports);
     
-    _browserifyRequire.modules["vers/model"]._cached = module.exports;
+    _browserifyRequire.modules["vers/lib/model"]._cached = module.exports;
     return module.exports;
 };
 
-_browserifyRequire.modules["vers/socket.io"] = function () {
+_browserifyRequire.modules["vers/lib/socket.io"] = function () {
     var module = { exports : {} };
     var exports = module.exports;
     var __dirname = "vers";
     var __filename = "vers/socket.io.js";
     
     var require = function (path) {
-        return _browserifyRequire.fromFile("vers/socket.io", path);
+        return _browserifyRequire.fromFile("vers/lib/socket.io", path);
     };
     
     (function () {
@@ -3992,18 +3925,18 @@ ASProxy.prototype =
 ;
     }).call(module.exports);
     
-    _browserifyRequire.modules["vers/socket.io"]._cached = module.exports;
+    _browserifyRequire.modules["vers/lib/socket.io"]._cached = module.exports;
     return module.exports;
 };
 
-_browserifyRequire.modules["vers/utils"] = function () {
+_browserifyRequire.modules["vers/lib/utils"] = function () {
     var module = { exports : {} };
     var exports = module.exports;
     var __dirname = "vers";
     var __filename = "vers/utils.js";
     
     var require = function (path) {
-        return _browserifyRequire.fromFile("vers/utils", path);
+        return _browserifyRequire.fromFile("vers/lib/utils", path);
     };
     
     (function () {
@@ -4090,18 +4023,106 @@ if (_.onServer) {
 };
     }).call(module.exports);
     
-    _browserifyRequire.modules["vers/utils"]._cached = module.exports;
+    _browserifyRequire.modules["vers/lib/utils"]._cached = module.exports;
     return module.exports;
 };
 
-_browserifyRequire.modules["vers/view"] = function () {
+_browserifyRequire.modules["vers/lib/vers"] = function () {
+    var module = { exports : {} };
+    var exports = module.exports;
+    var __dirname = "vers";
+    var __filename = "vers/vers.js";
+    
+    var require = function (path) {
+        return _browserifyRequire.fromFile("vers/lib/vers", path);
+    };
+    
+    (function () {
+        var dom = exports.dom = require('./dom'),
+    model = exports.model = require('./model'),
+    view = exports.view = require('./view'),
+    _ = exports.utils = require('./utils');
+
+dom._link(model);
+model._link(view);
+view._link(dom, model);
+
+module.exports = function(clientModule, clientExports) {
+  if (_.onServer) {
+    clientExports.dom = dom;
+    clientExports.model = model;
+    clientExports.view = view;
+
+    clientModule.exports = function(app) {
+      var io = require('socket.io'),
+          browserify = require('browserify'),
+          path = require('path'),
+          clientDir = path.dirname(clientModule.filename),
+          js = browserify({
+            staticRoot: path.dirname(clientDir),
+            base: clientDir,
+            coffee: false,
+            require: ['vers'],
+            //filter: _.minify
+          }),
+          socket = io.listen(app, {transports: ['websocket', 'xhr-polling'] });
+      socket.on('connection', function(client) {      
+        client.on('message', function(message) {
+          var data = JSON.parse(message),
+              method = data[0],
+              args = data[1];
+          // Don't store or send to other clients if the model path contains a name
+          // that starts with an underscore
+          if (! /(^_)|(\._)/.test(args[0])) {
+            model[method].apply(null, args);
+            client.broadcast(message);
+          }
+        });
+      });
+      model._setSocket(socket);
+      clientExports.socket = socket;
+
+      view._setClientName(path.basename(clientModule.filename, '.js'));
+      view._setJsFile(js.filename);
+      app.use(js.handle);
+
+      return clientExports;
+    };
+  } else {
+    clientModule.exports = function(count, modelData, modelEvents, domEvents) {
+      var io = require('./socket.io'),
+          socket = new io.Socket(null);
+      socket.connect();
+      socket.on('message', function(message) {
+        message = JSON.parse(message);
+        model['_' + message[0]].apply(null, message[1]);
+      });
+      model._setSocket(socket);
+      
+      view.uniqueId._count = count;
+      model.init(modelData);
+      model.events.set(modelEvents);
+      dom.events.set(domEvents);
+      return clientExports;
+    };
+  }
+
+  return exports;
+};;
+    }).call(module.exports);
+    
+    _browserifyRequire.modules["vers/lib/vers"]._cached = module.exports;
+    return module.exports;
+};
+
+_browserifyRequire.modules["vers/lib/view"] = function () {
     var module = { exports : {} };
     var exports = module.exports;
     var __dirname = "vers";
     var __filename = "vers/view.js";
     
     var require = function (path) {
-        return _browserifyRequire.fromFile("vers/view", path);
+        return _browserifyRequire.fromFile("vers/lib/view", path);
     };
     
     (function () {
@@ -4366,109 +4387,9 @@ if (_.onServer) {
 ;
     }).call(module.exports);
     
-    _browserifyRequire.modules["vers/view"]._cached = module.exports;
+    _browserifyRequire.modules["vers/lib/view"]._cached = module.exports;
     return module.exports;
 };
-_browserifyRequire.modules["./chat"] = function () {
-    var module = { exports : {} };
-    var exports = module.exports;
-    var __dirname = ".";
-    var __filename = "./chat.coffee";
-    
-    var require = function (path) {
-        return _browserifyRequire.fromFile("./chat", path);
-    };
-    
-    (function () {
-        (function() {
-  var model, vers, view, _;
-  vers = require("./lib/vers")();
-  _ = exports.utils = vers.utils;
-  model = vers.model;
-  view = vers.view;
-  if (_.onServer) {
-    model.init({
-      users: {},
-      messages: [],
-      _session: {
-        userId: 0,
-        user: model.ref("users", "_session.userId"),
-        newComment: "",
-        title: model.func("title")
-      }
-    });
-    view.make("Title", {
-      model: "_session.title"
-    });
-    require("fs").readFile("" + __dirname + "/chat.styl", "utf8", function(err, styl) {
-      return require("stylus").render(styl, {
-        compress: true
-      }, function(err, css) {
-        return view.make("Head", "<meta name=viewport content=\"width=device-width\">\n<style>" + css + "</style>");
-      });
-    });
-    view.make("Body", {
-      messages: {
-        model: "messages",
-        view: "message"
-      },
-      userPicUrl: {
-        model: "_session.user.picUrl"
-      },
-      userName: {
-        model: "_session.user.name"
-      },
-      newComment: {
-        model: "_session.newComment"
-      }
-    }, "<div id=messageContainer><ul id=messageList>{{{messages}}}</ul></div>\n<div id=foot>\n  <img id=inputPic src={{{userPicUrl}}} class=pic>\n  <div id=inputs>\n    <input id=inputName value={{userName}}>\n    <form id=inputForm action=javascript:chat.postMessage()>\n      <input id=commentInput value={{newComment}} silent>\n    </form>\n  </div>\n</div>");
-    view.preLoad(function() {
-      var container, foot, messageList, winResize;
-      container = $("messageContainer");
-      foot = $("foot");
-      messageList = $("messageList");
-      winResize = function() {
-        container.style.height = (window.innerHeight - foot.offsetHeight) + "px";
-        return container.scrollTop = messageList.offsetHeight;
-      };
-      winResize();
-      window.onresize = winResize;
-      return $("commentInput").focus();
-    });
-  }
-  model.makeFunc("title", ["messages", "_session.user.name"], function(messages, userName) {
-    return "Chat (" + messages.length + ") - " + userName;
-  });
-  view.make("message", function(item) {
-    return {
-      userPicUrl: {
-        model: "users." + item.userId + ".picUrl"
-      },
-      userName: {
-        model: "users." + item.userId + ".name"
-      },
-      comment: item.comment
-    };
-  }, "<li><img src={{{userPicUrl}}} class=pic>\n  <div class=message>\n    <p><b>{{userName}}</b>\n    <p>{{comment}}\n  </div>", {
-    after: function() {
-      return $("messageContainer").scrollTop = $("messageList").offsetHeight;
-    }
-  });
-  exports.postMessage = function() {
-    model.push("messages", {
-      userId: model.get("_session.userId"),
-      comment: model.get("_session.newComment")
-    });
-    return model.set("_session.newComment", "");
-  };
-}).call(this);
-;
-    }).call(module.exports);
-    
-    _browserifyRequire.modules["./chat"]._cached = module.exports;
-    return module.exports;
-};
-
 _browserifyRequire.modules["./chat"] = function () {
     var module = { exports : {} };
     var exports = module.exports;
