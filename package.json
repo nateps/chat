@@ -1,6 +1,6 @@
 {
   "name": "chat",
-  "description": "Demo chat application built on vers framework.",
+  "description": "Demo chat application built on Vers framework.",
   "version": "0.0.1",
   "author": "Nate Smith",
   "directories": {
@@ -14,7 +14,7 @@
     "stylus": "*",
     "socket.io": "*",
     "browserify": "*",
-    "jsmin": "*",
+    "uglify-js": "*",
     "mongodb": "*",
     "connect-mongodb": "*"
   }
