@@ -4,6 +4,4 @@
 	bare = true
 	ignorecase = true
 [remote "origin"]
-	fetch = +refs/*:refs/*
-	mirror = true
 	url = /Users/nateps/Documents/Projects/vers
