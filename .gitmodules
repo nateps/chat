@@ -1,0 +1,3 @@
+[submodule "support/vers"]
+	path = support/vers
+	url = git@github.com:nateps/vers.git
