@@ -22,8 +22,6 @@ var dbUri = (process.env.MONGODB_PATH || 'mongodb://127.0.0.1:27017') + '/chat',
     MAX_MESSAGES = 100,
     db, messages, users;
 
-console.log(__dirname);
-
 function skipMessages(count) {
   return Math.max(count - MAX_MESSAGES, 0);
 }
