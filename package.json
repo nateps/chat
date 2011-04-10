@@ -16,6 +16,8 @@
     "browserify": "*",
     "uglify-js": "*",
     "mongodb": "*",
-    "connect-mongodb": "*"
+    "connect-mongodb": "*",
+    "connect-gzip": "*",
+    "vers": "*"
   }
 }
