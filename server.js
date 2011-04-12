@@ -1,14 +1,13 @@
-var dbUri = (process.env.MONGODB_PATH || 'mongodb://127.0.0.1:27017') + '/chat',
+var dbUrl = (process.env.MONGODB_PATH || 'mongodb://127.0.0.1:27017') + '/chat',
     mongo = require('mongodb'),
     mongoStore = require('connect-mongodb'),
     express = require('express'),
-    connect = require('connect'),
     app = express.createServer(),
     chat = require('./lib/chat')(app),
     _ = chat.utils,
-    newUserId = 0,
     NUM_USER_IMAGES = 10,
     MAX_MESSAGES = 100,
+    newUserId = 0,
     db, messages, users;
 
 function skipMessages(count) {
@@ -37,7 +36,7 @@ function loadDb() {
   });
 }
 
-mongo.connect(dbUri, function(err, obj) {
+mongo.connect(dbUrl, function(err, obj) {
   db = obj;
   db.collection('messages', function(err, obj) {
     messages = obj;
@@ -48,7 +47,7 @@ mongo.connect(dbUri, function(err, obj) {
   });
 });
 
-chat.socket.on('connection', function(client) {      
+chat.socket.on('connection', function(client) {
   client.on('message', function(message) {
     var data = JSON.parse(message),
         method = data[0],
@@ -66,33 +65,12 @@ chat.socket.on('connection', function(client) {
   });
 });
 
-function parseConnectionURL(url) {
-  var config = require('url').parse(url),
-      auth = null;
-
-  if (!config.protocol.match(/^mongo/)) {
-    throw new Error("URL must be in the format mongo://user:pass@host:port/dbname");
-  }
-
-  if (config.auth) {
-    auth = config.auth.split(':', 2);
-  }
-
-  return {
-    host: config.hostname || defaults.host,
-    port: config.port || defaults.port,
-    dbname: config.pathname.replace(/^\//, '') || defaults.dbname,
-    username: auth && auth[0],
-    password: auth && auth[1]
-  };
-}
-
 app.use(express.static('public', { maxAge: 1000 * 60 * 60 * 24 * 365 }));
 app.use(express.cookieParser());
 app.use(express.session({
   secret: 'steve_urkel',
   cookie: { maxAge: 1000 * 60 * 60 * 24 * 365 },
-  store: mongoStore(parseConnectionURL(dbUri))
+  store: mongoStore({ url: dbUrl })
 }));
 
 app.get('/', function(req, res) {
@@ -100,6 +78,7 @@ app.get('/', function(req, res) {
         req.session.userId : newUserId++,
       modelName = 'users.' + userId,
       newUser, messagesModel;
+  
   if (chat.model.get(modelName) === null) {
     newUser = {
       name: 'User ' + (userId + 1),
@@ -111,13 +90,13 @@ app.get('/', function(req, res) {
     users.update({ userId: userId }, newUser, { upsert: true });
   };
   chat.model.set('_session.userId', userId);
+  
+  // This splices the messages list in the server's model, which doesn't
+  // update the model of any already connected clients.
   messagesModel = chat.model.get('messages');
-  // TODO: There should be a model method to remove elements from an array.
-  // I'm just splicing the messages list in the server's model, since I don't intend
-  // to update connected clients
   messagesModel.splice(0, skipMessages(messagesModel.length));
+  
   res.send(chat.view.html());
 });
 
-// This should work with Joyent
 app.listen(process.env.PORT || 8001);
