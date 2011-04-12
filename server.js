@@ -6,19 +6,8 @@ var dbUri = (process.env.MONGODB_PATH || 'mongodb://127.0.0.1:27017') + '/chat',
     app = express.createServer(),
     chat = require('./lib/chat')(app),
     _ = chat.utils,
-    userImages = [
-      '/images/user_red.png',
-      '/images/user_blue.png',
-      '/images/user_green.png',
-      '/images/user_light_gray.png',
-      '/images/user_yellow.png',
-      '/images/user_purple.png',
-      '/images/user_orange.png',
-      '/images/user_magenta.png',
-      '/images/user_cyan.png',
-      '/images/user_dark_gray.png',
-    ],
     newUserId = 0,
+    NUM_USER_IMAGES = 10,
     MAX_MESSAGES = 100,
     db, messages, users;
 
@@ -114,7 +103,8 @@ app.get('/', function(req, res) {
   if (chat.model.get(modelName) === null) {
     newUser = {
       name: 'User ' + (userId + 1),
-      picUrl: userImages[userId % userImages.length],
+      picUrl: 'images/user_default.png',
+      picClass: 'pic' + (userId % NUM_USER_IMAGES),
       userId: userId
     };
     chat.model.set(modelName, newUser, true);
