@@ -22,7 +22,7 @@ if _.onServer
       view.make 'Head', """
         <meta name=viewport content="width=device-width">
         <style>#{css}</style>
-        """
+        """.replace /\n/g, ''
   
   view.make 'Body', {
       messages: {model: 'messages', view: 'message'}
@@ -52,7 +52,7 @@ if _.onServer
     winResize()
     window.onresize = winResize
     $('commentInput').focus()
-
+else # Workaround for uglify
 
 model.makeFunc 'title', ['messages', '_session.user.name'],
   (messages, userName) -> "Chat (#{messages.length}) - #{userName}"
