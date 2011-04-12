@@ -30,7 +30,7 @@ if _.onServer
       userName: {model: '_session.user.name'}
       newComment: {model: '_session.newComment'}
     }, """
-    <div id=messageContainer><ul id=messageList>{{{messages}}}</ul></div>
+    <pre id=messageContainer><ul id=messageList>{{{messages}}}</ul></pre>
     <div id=foot>
       <img id=inputPic src={{{userPicUrl}}} class=pic>
       <div id=inputs>
