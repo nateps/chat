@@ -103,7 +103,7 @@ app.get('/', function(req, res) {
   if (chat.model.get(modelName) === null) {
     newUser = {
       name: 'User ' + (userId + 1),
-      picUrl: 'images/user_default.png',
+      picUrl: 'img/s.png',
       picClass: 'pic' + (userId % NUM_USER_IMAGES),
       userId: userId
     };
