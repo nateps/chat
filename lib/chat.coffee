@@ -1,3 +1,5 @@
+SPRITE_URL = 'img/s.png'
+
 vers = require('vers')(module, exports)
 _ = exports.utils = vers.utils
 model = vers.model
@@ -26,14 +28,13 @@ if _.onServer
   
   view.make 'Body', {
       messages: {model: 'messages', view: 'message'}
-      userPicUrl: {model: '_session.user.picUrl'}
       userPicClass: {model: '_session.user.picClass'}
       userName: {model: '_session.user.name'}
       newComment: {model: '_session.newComment'}
     }, """
     <pre id=messageContainer><ul id=messageList>{{{messages}}}</ul></pre>
     <div id=foot>
-      <img id=inputPic src={{{userPicUrl}}} class={{{userPicClass}}}>
+      <img id=inputPic src=#{SPRITE_URL} class={{{userPicClass}}}>
       <div id=inputs>
         <input id=inputName value={{userName}}>
         <form id=inputForm action=javascript:chat.postMessage()>
@@ -59,13 +60,12 @@ model.makeFunc 'title', ['messages', '_session.user.name'],
   (messages, userName) -> "Chat (#{messages.length}) - #{userName}"
 
 view.make 'message', (item) -> {
-      userPicUrl: {model: "users.#{item.userId}.picUrl"}
       userPicClass: {model: "users.#{item.userId}.picClass"}
       userName: {model: "users.#{item.userId}.name"}
       comment: item.comment
     },
   """
-  <li><img src={{{userPicUrl}}} class={{{userPicClass}}}>
+  <li><img src=#{SPRITE_URL} class={{{userPicClass}}}>
     <div class=message>
       <p><b>{{userName}}</b>
       <p>{{comment}}
