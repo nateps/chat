@@ -26,7 +26,7 @@ app.use express.session {
 app.get '/', (req, res) ->
   session = req.session
   session.userId = userId =
-    if session.userId then session.userId else newUserId++
+    if _.isNumber(session.userId) then session.userId else newUserId++
   
   userPath = 'users.' + userId
   if model.get(userPath) is null

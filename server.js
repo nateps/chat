@@ -31,7 +31,7 @@ app.use(express.session({
 app.get('/', function(req, res) {
   var messagesModel, session, userId, userPath;
   session = req.session;
-  session.userId = userId = session.userId ? session.userId : newUserId++;
+  session.userId = userId = _.isNumber(session.userId) ? session.userId : newUserId++;
   userPath = 'users.' + userId;
   if (model.get(userPath) === null) {
     model.set(userPath, {
