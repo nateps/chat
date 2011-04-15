@@ -71,7 +71,7 @@ if _.onServer
       userName: {model: '_session.user.name'}
       newComment: {model: '_session.newComment'}
     }, """
-    <pre id=messageContainer><ul id=messageList>{{{messages}}}</ul></pre>
+    <div id=messageContainer><ul id=messageList>{{{messages}}}</ul></div>
     <div id=foot>
       <img id=inputPic src=#{SPRITE_URL} class={{{userPicClass}}}>
       <div id=inputs>
