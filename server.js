@@ -6,7 +6,6 @@ MAX_AGE_ONE_YEAR = {
 };
 dbUrl = (process.env.MONGODB_PATH || 'mongodb://127.0.0.1:27017') + '/chat';
 mongoStore = require('connect-mongodb');
-gzip = require('connect-gzip');
 express = require('express');
 app = express.createServer();
 chat = require('./lib/chat')(app, dbUrl);
@@ -21,7 +20,6 @@ chat.load = function() {
   }
 };
 app.use(express.static('public', MAX_AGE_ONE_YEAR));
-app.use(gzip.gzip());
 app.use(express.cookieParser());
 app.use(express.session({
   secret: '89-Black$turtLE@woRk',
