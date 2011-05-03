@@ -1,4 +1,4 @@
-var MAX_AGE_ONE_YEAR, MAX_MESSAGES, NUM_USER_IMAGES, app, chat, dbUrl, express, model, mongoStore, newUserId, _;
+var MAX_AGE_ONE_YEAR, MAX_MESSAGES, NUM_USER_IMAGES, app, chat, dbUrl, express, gzip, model, mongoStore, newUserId, _;
 NUM_USER_IMAGES = 10;
 MAX_MESSAGES = 100;
 MAX_AGE_ONE_YEAR = {

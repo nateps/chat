@@ -12,10 +12,6 @@
   "dependencies": {
     "express": "*",
     "stylus": "*",
-    "socket.io": "*",
-    "browserify": "*",
-    "uglify-js": "*",
-    "mongodb": "*",
     "connect-mongodb": "*",
     "connect-gzip": "*",
     "vers": "*"
