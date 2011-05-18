@@ -26,25 +26,28 @@ app.use(express.cookieParser());
 app.use(express.session({
   secret: '89-Black$turtLE@woRk',
   cookie: MAX_AGE_ONE_YEAR,
-  store: mongoStore({
+  store: new mongoStore({
     url: dbUrl
   })
 }));
 app.get('/', function(req, res) {
-  var messagesModel, session, userId, userPath;
-  session = req.session;
-  session.userId = userId = _.isNumber(session.userId) ? session.userId : newUserId++;
-  userPath = 'users.' + userId;
-  if (model.get(userPath) === null) {
-    model.set(userPath, {
-      name: 'User ' + (userId + 1),
-      picClass: 'pic' + (userId % NUM_USER_IMAGES),
-      userId: userId
-    });
-  }
-  model.set('_session.userId', userId);
-  messagesModel = model.get('messages');
-  messagesModel.splice(0, Math.max(messagesModel.length - MAX_MESSAGES, 0));
-  return res.send(chat.view.html());
+  return req.session.reload(function() {
+    var messagesModel, session, userId, userPath;
+    session = req.session;
+    session.userId = userId = _.isNumber(session.userId) ? session.userId : newUserId++;
+    req.session.save();
+    userPath = 'users.' + userId;
+    if (model.get(userPath) === null) {
+      model.set(userPath, {
+        name: 'User ' + (userId + 1),
+        picClass: 'pic' + (userId % NUM_USER_IMAGES),
+        userId: userId
+      });
+    }
+    model.set('_session.userId', userId);
+    messagesModel = model.get('messages');
+    messagesModel.splice(0, Math.max(messagesModel.length - MAX_MESSAGES, 0));
+    return res.send(chat.view.html());
+  });
 });
 app.listen(process.env.PORT || 8001);
